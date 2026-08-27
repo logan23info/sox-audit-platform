@@ -65,8 +65,10 @@ export const updateMemberRole = (id, role) =>
 export const removeMember = (id) =>
   handle(supabase.from('programme_members').delete().eq('id', id))
 
-export const getMyRole = (programmeId, userId) =>
-  handle(supabase.from('programme_members').select('role').eq('programme_id', programmeId).eq('user_id', userId).single())
+export const getMyRole = async (programmeId, userId) => {
+  const { data } = await supabase.from('programme_members').select('role').eq('programme_id', programmeId).eq('user_id', userId).maybeSingle()
+  return data
+}
 
 // ── SOX SCOPE ────────────────────────────────────────────────
 export const getScope = (programmeId) =>
