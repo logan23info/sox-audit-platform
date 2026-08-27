@@ -200,6 +200,12 @@ export default function AppShell({ children }) {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
+          {!programmeId && location.pathname !== '/programmes' && location.pathname !== '/dashboard' && (
+            <div className="mx-6 mt-4 p-3 rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-300 flex items-center justify-between gap-3">
+              <span>⚠ No active engagement selected — data cannot load.</span>
+              <a href="/programmes" className="font-semibold underline whitespace-nowrap">Select engagement →</a>
+            </div>
+          )}
           {children}
         </main>
       </div>
