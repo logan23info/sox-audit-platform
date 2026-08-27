@@ -74,8 +74,10 @@ export const getMyRole = async (programmeId, userId) => {
 export const getScope = (programmeId) =>
   handle(supabase.from('sox_scope').select('*').eq('programme_id', programmeId).order('created_at'))
 
-export const upsertScope = (data) =>
-  handle(supabase.from('sox_scope').upsert(sanitise(data)).select().single())
+export const upsertScope = (data) => {
+  const { total_score, ...rest } = data
+  return handle(supabase.from('sox_scope').upsert(sanitise(rest)).select().single())
+}
 
 export const deleteScope = (id) =>
   handle(supabase.from('sox_scope').delete().eq('id', id))
