@@ -111,6 +111,10 @@ export default function RCM() {
           <Field label="Owner role"><Input placeholder="IT Security / Finance" value={form.owner_role} onChange={set('owner_role')} maxLength={60}/></Field>
           <Field label="PCAOB ref"><Input placeholder="AS 2201 Para .26" value={form.pcaob_ref} onChange={set('pcaob_ref')} maxLength={40}/></Field>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Status"><Select value={form.status||'Not Tested'} onChange={set('status')} options={['Not Tested','In Progress','Effective','Ineffective','Not Applicable']}/></Field>
+          <Field label="Key control"><Select value={form.is_key_control?'yes':'no'} onChange={e=>setForm(f=>({...f,is_key_control:e.target.value==='yes'}))} options={[{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/></Field>
+        </div>
         <Field label="Assertions">
           <div className="flex gap-3 flex-wrap mt-1">{ASSERTIONS.map(a=>(
             <label key={a} className="flex items-center gap-1.5 text-sm cursor-pointer">
