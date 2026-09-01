@@ -55,8 +55,11 @@ ${evidenceText}
 
 Assess this evidence against the control objective. Return JSON schema exactly.`
       const res = await callAI({ systemPrompt:SOX_SYSTEM_PROMPT, userMessage:userMsg })
-      const clean = res.text.replace(/```json|```/g,'').trim()
-      const parsed = JSON.parse(clean)
+      if (!res.text?.trim()) throw new Error('Empty response from AI')
+      const clean = res.text.replace(/```json|```/g,'').replace(/^[^{]*/,'').trim()
+      let parsed
+      try { parsed = JSON.parse(clean) }
+      catch { throw new Error('AI returned non-JSON: ' + clean.slice(0,100)) }
       parsed.model = res.model; parsed.timestamp = res.timestamp
       setAiOutput(parsed)
       setForm(f=>({...f, classification:parsed.assessment?.classification||'', severity:parsed.assessment?.severity||'', condition:parsed.audit_finding||'', root_cause:parsed.root_cause||'', evidence_excerpt:parsed.assessment?.evidence_excerpt||evidenceText }))
