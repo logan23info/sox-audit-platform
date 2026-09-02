@@ -36,7 +36,7 @@ export default function Templates() {
   const open = (r=BLANK) => { setForm({...BLANK,...r}); setModal(true) }
 
   const save = async () => {
-    if (!form.template_name) { toast({type:'warning',title:'Name required'}); return }
+    if (!form.template_name.trim()) { toast({type:'warning',title:'Template name required', description:'Enter a name before saving'}); return }
     setSaving(true)
     await upsertTemplate({...form, programme_id:programmeId})
     toast({type:'success',title:'Template saved'}); setModal(false); load()
@@ -44,22 +44,33 @@ export default function Templates() {
   }
 
   const seedBase = async () => {
+    if (rows.length > 0 && !confirm('Templates already exist. Seed again? This may create duplicates if no unique constraint is set.')) return
     setSeeding(true)
     await Promise.all(BASE_TEMPLATES.map(t=>upsertTemplate({...t, programme_id:programmeId})))
-    toast({type:'success',title:'5 base templates seeded — marked SAMPLE, review before use'}); load()
+    toast({type:'success',title:'Base templates seeded — marked SAMPLE, review before use'}); load()
     setSeeding(false)
   }
 
   const applyToWorkpaper = async (t) => {
-    const steps = JSON.parse(t.test_steps||'[]')
-    const attrs = JSON.parse(t.attributes||'[]')
-    await upsertWorkpaper({
-      programme_id:programmeId, domain:t.domain,
-      control_title:t.template_name, conclusion:'',
-      status:'Not Started',
-      attribute_1:attrs[0]||'', attribute_2:attrs[1]||'', attribute_3:attrs[2]||'',
-    })
-    toast({type:'success',title:'Workpaper created from template'})
+    try {
+      const attrs = (() => { try { return JSON.parse(t.attributes||'[]') } catch { return [] } })()
+      const result = await upsertWorkpaper({
+        programme_id:programmeId,
+        domain:t.domain,
+        control_title:t.template_name,
+        conclusion:'',
+        status:'Not Started',
+        preparer:'',
+        reviewer:'',
+        ipe_validated:false,
+        population_cnt:null,
+        population_src:'',
+      })
+      if (result) toast({type:'success',title:'Workpaper created from template', description:`${t.domain} — ${t.template_name}`})
+      else toast({type:'error',title:'Failed to create workpaper'})
+    } catch(e) {
+      toast({type:'error',title:'Error',description:e.message})
+    }
   }
 
   const cols = [

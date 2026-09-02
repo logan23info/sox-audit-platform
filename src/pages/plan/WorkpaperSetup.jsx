@@ -75,8 +75,11 @@ export default function WorkpaperSetup() {
   const save = async () => {
     if (!form.domain||!form.control_title) { toast({type:'warning',title:'Domain and title required'}); return }
     if (form.status==='Complete' && form.id) {
-      const check = checkSampleReady(form, samplePlans[form.id], itemCounts[form.id]||0)
-      if (!check.ok) { toast({type:'warning',title:'Sample size not met',description:check.msg}); return }
+      const sp = await getSamplePlan(form.id)
+      const items = await getTestingItems(form.id)
+      const itemCount = items?.length || 0
+      const check = checkSampleReady(form, sp, itemCount)
+      if (!check.ok) { toast({type:'warning',title:'Sample size not met — AS 2315',description:check.msg}); return }
     }
     setSaving(true)
     await upsertWorkpaper({...form, programme_id:programmeId})

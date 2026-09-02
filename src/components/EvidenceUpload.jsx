@@ -19,7 +19,11 @@ export default function EvidenceUpload({ programmeId, recordId, label='Evidence 
   const handleUpload = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.size > 10 * 1024 * 1024) { toast({ type:'warning', title:'File too large', description:'Max 10MB per file' }); return }
+    const MAX_MB = 10
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast({ type:'warning', title:`File too large — max ${MAX_MB}MB`, description:`${file.name} is ${(file.size/1024/1024).toFixed(1)}MB` })
+      return
+    }
     setUploading(true)
     const path = await uploadEvidence(file, programmeId, recordId)
     if (path) { toast({ type:'success', title:`${file.name} uploaded` }); load() }

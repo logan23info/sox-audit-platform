@@ -19,7 +19,9 @@ export default function Assertions() {
   const [activeAssertion, setActiveAssertion] = useState(null)
   const [form, setForm]   = useState(BLANK)
   const [sigForm, setSigForm] = useState({ signatory_name:'', signatory_title:'', document_type:'assertion', signature_data:'' })
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]     = useState(false)
+  const [genLetter, setGenLetter] = useState(false)
+  const [letter, setLetter]       = useState('')
 
   const load = () => { getAssertions(programmeId).then(d=>setRows(d||[])); getSignatures(programmeId).then(d=>setSigs(d||[])) }
   useEffect(()=>{ if(programmeId) load() },[programmeId])

@@ -41,7 +41,7 @@ export default function InspectionTracker() {
   const open = (r=BLANK) => { setForm({...BLANK,...r}); setModal(true) }
 
   const save = async () => {
-    if (!form.finding_area) { toast({type:'warning',title:'Finding area required'}); return }
+    if (!form.finding_area?.trim()) { toast({type:'warning',title:'Finding area required', description:'Enter a finding area before saving'}); return }
     setSaving(true)
     await upsertInspectionFinding({...form, programme_id:programmeId})
     toast({type:'success',title:'Saved'}); setModal(false); load()
