@@ -103,8 +103,10 @@ export const deleteWorkpaper = (id) =>
   handle(supabase.from('sox_workpaper_shells').delete().eq('id', id))
 
 // ── SAMPLE PLAN ──────────────────────────────────────────────
-export const getSamplePlan = (workpaperId) =>
-  handle(supabase.from('sox_sample_plan').select('*').eq('workpaper_id', workpaperId).single())
+export const getSamplePlan = async (workpaperId) => {
+  const { data } = await supabase.from('sox_sample_plan').select('*').eq('workpaper_id', workpaperId).maybeSingle()
+  return data
+}
 
 export const upsertSamplePlan = (data) =>
   handle(supabase.from('sox_sample_plan').upsert(sanitise(data)).select().single())

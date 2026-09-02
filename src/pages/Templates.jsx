@@ -44,7 +44,7 @@ export default function Templates() {
   }
 
   const seedBase = async () => {
-    if (rows.length > 0 && !confirm('Templates already exist. Seed again? This may create duplicates if no unique constraint is set.')) return
+    if (rows.length > 0 && !window.confirm('Templates already exist. Seed base templates again?')) return
     setSeeding(true)
     await Promise.all(BASE_TEMPLATES.map(t=>upsertTemplate({...t, programme_id:programmeId})))
     toast({type:'success',title:'Base templates seeded — marked SAMPLE, review before use'}); load()

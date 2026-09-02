@@ -92,6 +92,7 @@ CEO: ${assertion.ceo_name||'[CEO Name]'} | CFO: ${assertion.cfo_name||'[CFO Name
                 <p className="text-xs text-gray-400">CEO: {r.ceo_name||'—'} · CFO: {r.cfo_name||'—'} · Date: {r.assertion_date||'—'}</p>
               </div>
               <div className="flex gap-2">
+                <button className="btn btn-outline btn-sm" onClick={()=>generateRepLetter(r)} disabled={genLetter}>{genLetter?<Loader size={13} className="animate-spin"/>:<Bot size={13}/>} Rep letter</button>
                 <button className="btn btn-outline btn-sm" onClick={()=>{setActiveAssertion(r);setSigModal(true)}}>E-sign</button>
                 <button className="btn btn-outline btn-sm" onClick={()=>open(r)}>Edit</button>
               </div>
