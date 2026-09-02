@@ -74,16 +74,21 @@ export default function WorkpaperSetup() {
 
   const save = async () => {
     if (!form.domain||!form.control_title) { toast({type:'warning',title:'Domain and title required'}); return }
-    if (form.status==='Complete' && form.id) {
-      const sp = await getSamplePlan(form.id)
-      if (!sp?.final_sample) {
-        toast({type:'warning',title:'Sample plan not set',description:'Set a sample plan before marking this workpaper Complete.'})
+    if (form.status==='Complete') {
+      const wpId = form.id
+      if (!wpId) {
+        toast({type:'warning',title:'Save the workpaper first, then set sample plan before marking Complete.'})
         return
       }
-      const items = await getTestingItems(form.id)
+      const sp = await getSamplePlan(wpId)
+      if (!sp?.final_sample) {
+        toast({type:'warning',title:'Sample plan not set',description:'Click "Set sample" on this workpaper before marking Complete.'})
+        return
+      }
+      const items = await getTestingItems(wpId)
       const itemCount = items?.length || 0
       if (itemCount < sp.final_sample) {
-        toast({type:'warning',title:'Sample size not met — AS 2315',description:`${itemCount} items tested — ${sp.final_sample} required. Cannot mark Complete.`})
+        toast({type:'warning',title:'Sample size not met — AS 2315',description:`${itemCount} of ${sp.final_sample} required items tested.`})
         return
       }
     }
