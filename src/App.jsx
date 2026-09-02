@@ -13,6 +13,7 @@ const Dashboard      = lazy_(() => import('./pages/Dashboard'))
 const Programmes     = lazy_(() => import('./pages/Programmes'))
 const Settings       = lazy_(() => import('./pages/Settings'))
 const Team           = lazy_(() => import('./pages/Team'))
+const Analytics      = lazy_(() => import('./pages/Analytics'))
 const Scoping        = lazy_(() => import('./pages/plan/Scoping'))
 const RCM            = lazy_(() => import('./pages/plan/RCM'))
 const WorkpaperSetup = lazy_(() => import('./pages/plan/WorkpaperSetup'))
@@ -48,6 +49,7 @@ function Protected() {
             <Route path="/programmes"           element={<Programmes />} />
             <Route path="/settings"             element={<Settings />} />
             <Route path="/team"                 element={<Team />} />
+            <Route path="/analytics"            element={<Analytics />} />
             <Route path="/plan/scoping"         element={<Scoping />} />
             <Route path="/plan/rcm"             element={<RCM />} />
             <Route path="/plan/workpapers"      element={<WorkpaperSetup />} />

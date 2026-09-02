@@ -303,3 +303,18 @@ export const callAI = async ({ systemPrompt, userMessage }) => {
   if (!res.ok) throw new Error(`AI call failed: ${res.status}`)
   return res.json()
 }
+
+// ── ANALYTICS QUERIES ────────────────────────────────────────
+export const getAnalyticsData = async (programmeId) => {
+  const [rcm, findings, deficiencies, remediation, testingItems, jeSegments, vendors, ipe] = await Promise.all([
+    handle(supabase.from('sox_rcm').select('domain, status, risk_rating').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_findings').select('domain, classification, severity, is_draft').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_deficiency_log').select('classification, status, audit_comm_req, public_disc_req').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_remediation').select('status').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_testing_items').select('exception').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_je_segments').select('segment_type, risk_level, population_count, sample_size').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_vendor_reviews').select('reliance_decision, report_type').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_ipe_validations').select('validated').eq('programme_id', programmeId)),
+  ])
+  return { rcm: rcm||[], findings: findings||[], deficiencies: deficiencies||[], remediation: remediation||[], testingItems: testingItems||[], jeSegments: jeSegments||[], vendors: vendors||[], ipe: ipe||[] }
+}
