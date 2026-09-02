@@ -54,7 +54,7 @@ export const deleteProgramme = (id) =>
 
 // ── PROGRAMME MEMBERS ────────────────────────────────────────
 export const getMembers = (programmeId) =>
-  handle(supabase.from('programme_members').select('*, profiles(full_name, email)').eq('programme_id', programmeId))
+  handle(supabase.from('programme_members').select('*, profiles!programme_members_user_id_fkey(full_name, email)').eq('programme_id', programmeId))
 
 export const addMember = (data) =>
   handle(supabase.from('programme_members').insert(data))
