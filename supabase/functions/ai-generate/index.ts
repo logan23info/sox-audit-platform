@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 
-const GROQ_KEY = Deno.env.get('GROQ_API_KEY') ?? ''
+const GROQ_KEY = Deno.env.get('SOXGROQ_API_KEY') ?? ''
 const MODEL    = 'llama-3.3-70b-versatile'
 
 const cors = {
