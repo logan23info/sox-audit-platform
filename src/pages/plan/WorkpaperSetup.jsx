@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FileText, Plus } from 'lucide-react'
-import { getWorkpapers, upsertWorkpaper, deleteWorkpaper, getRCM, getSamplePlan, upsertSamplePlan } from '../../lib/supabase'
+import { getWorkpapers, upsertWorkpaper, deleteWorkpaper, getRCM, getSamplePlan, upsertSamplePlan, getTestingItems } from '../../lib/supabase'
 import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import { DOMAINS, SAMPLE_TABLE, FREQUENCIES, RISK_RATINGS } from '../../constants'
@@ -11,6 +11,15 @@ import { Field, Input, Select, Textarea } from '../../components/FormField'
 
 const BLANK = { domain:'LA', control_id:'', control_title:'', population_src:'', population_cnt:'', ipe_validated:false, preparer:'', reviewer:'', conclusion:'', status:'Not Started' }
 const WP_STATUSES = ['Not Started','In Progress','Complete','Reviewed']
+
+// AS 2315 sample size enforcement
+const checkSampleReady = (wp, samplePlan, itemCount) => {
+  if (!samplePlan?.final_sample) return { ok: true, msg: '' }
+  if (itemCount < samplePlan.final_sample) {
+    return { ok: false, msg: `AS 2315: ${itemCount} items tested — ${samplePlan.final_sample} required. Cannot mark Complete.` }
+  }
+  return { ok: true, msg: '' }
+}
 
 const calcSample = (freq,risk,isNew,priorEx) => {
   const base = SAMPLE_TABLE[freq]?.[risk] ?? 5
@@ -30,9 +39,25 @@ export default function WorkpaperSetup() {
   const [form, setForm]     = useState(BLANK)
   const [sp, setSp]         = useState({ frequency:'monthly', risk_rating:'high', is_new_control:false, prior_exception:false, is_itdm:false })
   const [activeWp, setActiveWp] = useState(null)
-  const [saving, setSaving] = useState(false)
+  const [saving, setSaving]   = useState(false)
+  const [samplePlans, setSamplePlans] = useState({})
+  const [itemCounts, setItemCounts]   = useState({})
 
-  const load = () => getWorkpapers(programmeId).then(d=>setRows(d||[]))
+  const load = () => getWorkpapers(programmeId).then(async d => {
+    const wps = d||[]
+    setRows(wps)
+    // Load sample plans for each workpaper
+    const plans = {}
+    const counts = {}
+    await Promise.all(wps.map(async wp => {
+      const sp = await getSamplePlan(wp.id)
+      if (sp) plans[wp.id] = sp
+      const items = await getTestingItems(wp.id)
+      counts[wp.id] = items?.length || 0
+    }))
+    setSamplePlans(plans)
+    setItemCounts(counts)
+  })
   useEffect(()=>{ if(programmeId){ load(); getRCM(programmeId).then(d=>setRcm(d||[])) } },[programmeId])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
@@ -48,6 +73,10 @@ export default function WorkpaperSetup() {
 
   const save = async () => {
     if (!form.domain||!form.control_title) { toast({type:'warning',title:'Domain and title required'}); return }
+    if (form.status==='Complete' && form.id) {
+      const check = checkSampleReady(form, samplePlans[form.id], itemCounts[form.id]||0)
+      if (!check.ok) { toast({type:'warning',title:'Sample size not met',description:check.msg}); return }
+    }
     setSaving(true)
     await upsertWorkpaper({...form, programme_id:programmeId})
     toast({type:'success',title:'Workpaper saved'}); setModal(false); load()
@@ -69,7 +98,13 @@ export default function WorkpaperSetup() {
     {key:'control_title',label:'Title'},
     {key:'ipe_validated',label:'IPE',render:r=><span className={`badge ${r.ipe_validated?'badge-green':'badge-gray'}`}>{r.ipe_validated?'✓ Valid':'Pending'}</span>},
     {key:'status',label:'Status',render:r=><span className={`badge ${statusColor(r.status)}`}>{r.status}</span>},
-    {key:'sample',label:'Sample',render:r=><button className="text-xs text-brand-600 underline" onClick={e=>{e.stopPropagation();openSample(r)}}>Set sample</button>},
+    {key:'sample',label:'Sample',render:r=>{
+    const sp = samplePlans[r.id]
+    const cnt = itemCounts[r.id]||0
+    if (!sp) return <button className="text-xs text-brand-600 underline" onClick={e=>{e.stopPropagation();openSample(r)}}>Set sample</button>
+    const ok = cnt>=sp.final_sample
+    return <span className={`badge ${ok?'badge-green':'badge-amber'}`} onClick={e=>{e.stopPropagation();openSample(r)}} style={{cursor:'pointer'}}>{cnt}/{sp.final_sample}</span>
+  }},
   ]
 
   const final = calcSample(sp.frequency,sp.risk_rating,sp.is_new_control,sp.prior_exception)

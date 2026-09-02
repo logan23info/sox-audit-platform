@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FlaskConical, Plus } from 'lucide-react'
-import { getWorkpapers, getTestingItems, upsertTestingItem, deleteTestingItem } from '../../lib/supabase'
+import { FlaskConical, Plus, Bot, Loader } from 'lucide-react'
+import { getWorkpapers, getTestingItems, upsertTestingItem, deleteTestingItem, callAI, upsertWorkpaper } from '../../lib/supabase'
 import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import PageHeader from '../../components/PageHeader'
@@ -19,6 +19,7 @@ export default function SampleTesting() {
   const [modal, setModal]           = useState(false)
   const [form, setForm]             = useState(BLANK)
   const [saving, setSaving]         = useState(false)
+  const [aiConc, setAiConc]         = useState(false)
 
   useEffect(()=>{ if(programmeId) getWorkpapers(programmeId).then(d=>setWorkpapers(d||[])) },[programmeId])
   const loadItems = (wp) => { setActiveWp(wp); getTestingItems(wp.id).then(d=>setItems(d||[])) }
@@ -39,6 +40,30 @@ export default function SampleTesting() {
     {key:'exception',label:'Exception',render:r=>r.exception?<span className="badge badge-red">Yes</span>:'—'},
   ]
 
+  const draftConclusion = async () => {
+    if (!activeWp) return
+    setAiConc(true)
+    try {
+      const total = items.length
+      const exc   = items.filter(i=>i.exception).length
+      const prompt = `[ROLE] SOX ITGC workpaper reviewer.
+[OUTPUT] JSON only: {"conclusion":"string","status":"Effective|Ineffective|In Progress"}
+[INSTRUCTIONS] Draft a professional workpaper conclusion based on test results. If 0 exceptions: conclude effective. If exceptions > 0: conclude ineffective or note exceptions. Be concise (3-4 sentences). DRAFT — auditor must review.`
+      const msg = `Control: ${activeWp.control_title} (${activeWp.domain} - ${activeWp.control_id})
+Population: ${activeWp.population_cnt||'N/A'} | Sample tested: ${total} | Exceptions: ${exc}
+Exception rate: ${total>0?Math.round((exc/total)*100):0}%
+Attributes tested: ${items[0]?[items[0].attribute_1,items[0].attribute_2,items[0].attribute_3].filter(Boolean).join(', '):'N/A'}`
+      const res = await callAI({ systemPrompt:prompt, userMessage:msg })
+      const clean = res.text.replace(/\`\`\`json|\`\`\`/g,'').replace(/^[^{]*/,'').trim()
+      const parsed = JSON.parse(clean)
+      await upsertWorkpaper({ ...activeWp, conclusion: parsed.conclusion, status: parsed.status })
+      setActiveWp(wp => ({ ...wp, conclusion: parsed.conclusion, status: parsed.status }))
+      workpapers.find(w=>w.id===activeWp.id) && (workpapers.find(w=>w.id===activeWp.id).conclusion = parsed.conclusion)
+      toast({ type:'success', title:'Conclusion drafted — DRAFT, review before finalising' })
+    } catch(e) { toast({ type:'error', title:'AI error', description:e.message }) }
+    setAiConc(false)
+  }
+
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <PageHeader eyebrow={<><FlaskConical size={12}/>Execute · Testing</>} title="Sample testing" subtitle="Test individual sample items per workpaper. Document each attribute, result, and exception."/>
@@ -58,7 +83,12 @@ export default function SampleTesting() {
               <p className="text-xs text-gray-400">{items.length} items tested · {exceptions} exception{exceptions!==1?'s':''}</p>
               {exceptions>0&&<span className="badge badge-red mt-1">{exceptions} exception(s) — evaluate for deficiency</span>}
             </div>
-            {isAuditor&&<button className="btn btn-primary btn-sm" onClick={()=>open()}><Plus size={13}/>Add item</button>}
+            <div className="flex gap-2">
+              <button className="btn btn-outline btn-sm" onClick={draftConclusion} disabled={aiConc}>
+                {aiConc?<><Loader size={13} className="animate-spin"/>Drafting…</>:<><Bot size={13}/>Draft conclusion</>}
+              </button>
+              {isAuditor&&<button className="btn btn-primary btn-sm" onClick={()=>open()}><Plus size={13}/>Add item</button>}
+            </div>
           </div>
           <div className="card p-0 overflow-hidden">
             <RecordTable cols={cols} rows={items} onEdit={isAuditor?open:null} onDelete={isAuditor?id=>deleteTestingItem(id).then(()=>loadItems(activeWp)):null} emptyMsg="No items tested yet."/>

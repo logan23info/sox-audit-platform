@@ -11,11 +11,12 @@ import { Field, Input, Select, Textarea } from '../../components/FormField'
 
 const BLANK = { control_id:'', domain:'LA', title:'', condition:'', criteria:'', cause:'', consequence:'', evidence_excerpt:'', root_cause:'', classification:'', severity:'', is_draft:true }
 
-const SOX_SYSTEM_PROMPT = `[ROLE] ISO/IEC SOX ITGC Lead Auditor embedded in audit platform.
+const SOX_SYSTEM_PROMPT = `[ROLE] SOX ITGC Lead Auditor embedded in audit platform.
 [SOURCE OF TRUTH] Use ONLY the evidence text provided — no prior knowledge substitution.
 [DETERMINISM] Temperature 0.1. Return INSUFFICIENT_EVIDENCE if evidence is ambiguous or incomplete.
 [OUTPUT] JSON only, no markdown, no preamble.
-[SCHEMA] {"assessment":{"control_id":"","domain":"","classification":"Conforming|Minor NC|Major NC|Observation|OFI|INSUFFICIENT_EVIDENCE","severity":"Low|Medium|High|Critical|N/A","confidence":0.0,"evidence_excerpt":""},"audit_finding":"4Cs format","root_cause":"required for any NC","corrective_actions":[{"step":1,"action":"","target_role":"","sla_days":0,"verification_required":true}],"prompt_version":"sox-v1","model":"","retrieved_context_ids":[],"timestamp":""}
+[4Cs FORMAT] audit_finding must follow: "CONDITION: [what was found]. CRITERIA: [what should exist per control objective]. CAUSE: [root cause of gap]. CONSEQUENCE: [financial reporting risk if unaddressed]."
+[SCHEMA] {"assessment":{"control_id":"","domain":"","classification":"Conforming|Minor NC|Major NC|Observation|OFI|INSUFFICIENT_EVIDENCE","severity":"Low|Medium|High|Critical|N/A","confidence":0.0,"evidence_excerpt":""},"audit_finding":"4Cs format — Condition/Criteria/Cause/Consequence","root_cause":"required for any NC","corrective_actions":[{"step":1,"action":"","target_role":"","sla_days":0,"verification_required":true}],"prompt_version":"sox-v2","model":"","retrieved_context_ids":[],"timestamp":""}
 [CONSTRAINTS] root_cause required for any NC. DRAFT — human sign-off required. Never state output is final.`
 
 const classify2deficiency = (classification) => {
@@ -138,7 +139,14 @@ Assess this evidence against the control objective. Return JSON schema exactly.`
               <span className="badge badge-gray">Severity: {aiOutput.assessment?.severity}</span>
               <span className="badge badge-gray">Confidence: {Math.round((aiOutput.assessment?.confidence||0)*100)}%</span>
             </div>
-            <p className="text-gray-600 dark:text-gray-400 mt-2"><strong>Finding:</strong> {aiOutput.audit_finding}</p>
+            {aiOutput.audit_finding && (
+              <div className="mt-2 space-y-1">
+                {aiOutput.audit_finding.split(/(?=CONDITION:|CRITERIA:|CAUSE:|CONSEQUENCE:)/).filter(Boolean).map((part,i)=>{
+                  const [label,...rest] = part.split(':')
+                  return <p key={i} className="text-xs text-gray-600 dark:text-gray-400"><strong className="text-gray-800 dark:text-gray-200">{label}:</strong>{rest.join(':')}</p>
+                })}
+              </div>
+            )}
             <p className="text-gray-600 dark:text-gray-400"><strong>Root cause:</strong> {aiOutput.root_cause}</p>
             {aiOutput.corrective_actions?.slice(0,2).map((a,i)=>(
               <p key={i} className="text-gray-500 text-xs">→ {a.action} ({a.target_role}, {a.sla_days}d)</p>
