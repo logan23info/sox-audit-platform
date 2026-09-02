@@ -83,20 +83,15 @@ export default function WorkpaperSetup() {
 
   const save = async () => {
     if (!form.domain||!form.control_title) { toast({type:'warning',title:'Domain and title required'}); return }
-    if (form.status==='Complete') {
-      const wpId = form.id
-      if (!wpId) { toast({type:'info',title:'Save workpaper first before marking Complete.'}); return }
-      // Always fetch fresh — avoids stale state issues
-      const freshSp = await getSamplePlan(wpId)
-      const freshItems = await getTestingItems(wpId)
+    if (form.status==='Complete' && form.id) {
+      // Non-blocking advisory warning only — does not prevent save
+      const freshSp = await getSamplePlan(form.id)
+      const freshItems = await getTestingItems(form.id)
       const freshCount = freshItems?.length || 0
       if (!freshSp?.final_sample) {
-        toast({type:'warning',title:'Sample plan not set',description:'Click "Set sample" on this workpaper row before marking Complete.'})
-        return
-      }
-      if (freshCount < freshSp.final_sample) {
-        toast({type:'warning',title:'Sample size not met — AS 2315',description:`${freshCount} of ${freshSp.final_sample} required items tested.`})
-        return
+        toast({type:'warning',title:'Advisory: Sample plan not set',description:'AS 2315: Set a sample plan for this workpaper.'})
+      } else if (freshCount < freshSp.final_sample) {
+        toast({type:'warning',title:`Advisory: ${freshCount}/${freshSp.final_sample} items tested`,description:'AS 2315 minimum not yet met.'})
       }
     }
     setSaving(true)
