@@ -27,7 +27,8 @@ export default function Templates() {
   const [modal, setModal] = useState(false)
   const [form, setForm]   = useState(BLANK)
   const [saving, setSaving] = useState(false)
-  const [seeding, setSeeding] = useState(false)
+  const [seeding, setSeeding]   = useState(false)
+  const [confirmSeed, setConfirmSeed] = useState(false)
 
   const load = () => getTemplates(programmeId).then(d=>setRows(d||[]))
   useEffect(()=>{ if(programmeId) load() },[programmeId])
@@ -44,7 +45,8 @@ export default function Templates() {
   }
 
   const seedBase = async () => {
-    if (rows.length > 0 && !window.confirm('Templates already exist. Seed base templates again?')) return
+    if (rows.length > 0 && !confirmSeed) { setConfirmSeed(true); return }
+    setConfirmSeed(false)
     setSeeding(true)
     await Promise.all(BASE_TEMPLATES.map(t=>upsertTemplate({...t, programme_id:programmeId})))
     toast({type:'success',title:'Base templates seeded — marked SAMPLE, review before use'}); load()
@@ -89,6 +91,15 @@ export default function Templates() {
           <button className="btn btn-primary" onClick={()=>open()}><Plus size={15}/>New template</button>
         </div>} />
       <div className="alert-info mb-4"><span className="text-sm">Base templates are marked SAMPLE — review and customise for your engagement before use. Test steps and attributes are editable per engagement.</span></div>
+      {confirmSeed && (
+        <div className="alert-warn mb-4 flex items-center justify-between">
+          <span className="text-sm"><strong>Templates already exist.</strong> Seed base templates again?</span>
+          <div className="flex gap-2 flex-shrink-0">
+            <button className="btn btn-outline btn-sm" onClick={()=>setConfirmSeed(false)}>Cancel</button>
+            <button className="btn btn-primary btn-sm" onClick={seedBase}>Yes, seed</button>
+          </div>
+        </div>
+      )}
       <div className="card p-0 overflow-hidden">
         <RecordTable cols={cols} rows={rows} onEdit={isAuditor?open:null} onDelete={isAuditor?id=>deleteTemplate(id).then(load):null} emptyMsg="No templates. Seed base templates or create your own."/>
       </div>

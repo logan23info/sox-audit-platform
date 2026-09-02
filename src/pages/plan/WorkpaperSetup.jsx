@@ -76,10 +76,16 @@ export default function WorkpaperSetup() {
     if (!form.domain||!form.control_title) { toast({type:'warning',title:'Domain and title required'}); return }
     if (form.status==='Complete' && form.id) {
       const sp = await getSamplePlan(form.id)
+      if (!sp?.final_sample) {
+        toast({type:'warning',title:'Sample plan not set',description:'Set a sample plan before marking this workpaper Complete.'})
+        return
+      }
       const items = await getTestingItems(form.id)
       const itemCount = items?.length || 0
-      const check = checkSampleReady(form, sp, itemCount)
-      if (!check.ok) { toast({type:'warning',title:'Sample size not met — AS 2315',description:check.msg}); return }
+      if (itemCount < sp.final_sample) {
+        toast({type:'warning',title:'Sample size not met — AS 2315',description:`${itemCount} items tested — ${sp.final_sample} required. Cannot mark Complete.`})
+        return
+      }
     }
     setSaving(true)
     await upsertWorkpaper({...form, programme_id:programmeId})
