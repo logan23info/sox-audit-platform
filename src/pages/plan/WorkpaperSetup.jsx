@@ -88,7 +88,6 @@ export default function WorkpaperSetup() {
       if (!wpId) { toast({type:'info',title:'Save workpaper first before marking Complete.'}); return }
       const sp = samplePlans[wpId]
       const itemCount = itemCounts[wpId] ?? 0
-      console.log('[SOX] Sample check:', { wpId, sp, itemCount, samplePlans, itemCounts })
       if (!sp?.final_sample) {
         toast({type:'warning',title:'Sample plan not set',description:'Click "Set sample" on this workpaper row before marking Complete.'})
         return
