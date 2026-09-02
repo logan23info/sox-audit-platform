@@ -41,7 +41,10 @@ const Frameworks     = lazy_(() => import('./pages/reference/Frameworks'))
 const CloudITGC      = lazy_(() => import('./pages/reference/CloudITGC'))
 const ERPGuides      = lazy_(() => import('./pages/reference/ERPGuides'))
 const SectorControls = lazy_(() => import('./pages/reference/SectorControls'))
-const InterviewPrep  = lazy_(() => import('./pages/reference/InterviewPrep'))
+const InterviewPrep       = lazy_(() => import('./pages/reference/InterviewPrep'))
+const Wiki                = lazy_(() => import('./pages/reference/Wiki'))
+const FAQ                 = lazy_(() => import('./pages/reference/FAQ'))
+const KnownLimitations    = lazy_(() => import('./pages/reference/KnownLimitations'))
 
 function Protected() {
   const { user, loading } = useAuth()
@@ -83,7 +86,10 @@ function Protected() {
             <Route path="/reference/cloud-itgc" element={<CloudITGC />} />
             <Route path="/reference/erp-guides" element={<ERPGuides />} />
             <Route path="/reference/sector"     element={<SectorControls />} />
-            <Route path="/reference/interview"  element={<InterviewPrep />} />
+            <Route path="/reference/interview"    element={<InterviewPrep />} />
+            <Route path="/reference/wiki"         element={<Wiki />} />
+            <Route path="/reference/faq"          element={<FAQ />} />
+            <Route path="/reference/limitations"  element={<KnownLimitations />} />
             <Route path="*"                     element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </Suspense>
