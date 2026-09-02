@@ -260,6 +260,9 @@ export const getAssertions = (programmeId) =>
 export const upsertAssertion = (data) =>
   handle(supabase.from('sox_mgmt_assertions').upsert(sanitise(data)).select().single())
 
+export const updateAssertionStatus = (id, status, date) =>
+  handle(supabase.from('sox_mgmt_assertions').update({ status, assertion_date: date }).eq('id', id))
+
 // ── STANDARDS TRACKER ────────────────────────────────────────
 export const getStandardsAck = (programmeId) =>
   handle(supabase.from('sox_standards_ack').select('*').eq('programme_id', programmeId))

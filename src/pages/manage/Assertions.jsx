@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FileCheck, Plus } from 'lucide-react'
-import { getAssertions, upsertAssertion, getSignatures, createSignature } from '../../lib/supabase'
+import { getAssertions, upsertAssertion, updateAssertionStatus, getSignatures, createSignature } from '../../lib/supabase'
 import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import PageHeader from '../../components/PageHeader'
@@ -38,8 +38,7 @@ export default function Assertions() {
     setSaving(true)
     await createSignature({...sigForm, programme_id:programmeId, signed_at:new Date().toISOString()})
     if (activeAssertion?.id) {
-      const { id, created_at, ...rest } = activeAssertion
-      await upsertAssertion({ ...rest, id, status:'Final', assertion_date: new Date().toISOString().slice(0,10), programme_id:programmeId })
+      await updateAssertionStatus(activeAssertion.id, 'Final', new Date().toISOString().slice(0,10))
     }
     toast({type:'success',title:'Signed — assertion updated to Final'}); setSigModal(false); load()
     setSaving(false)
