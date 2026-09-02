@@ -435,3 +435,48 @@ export const upsertInspectionFinding = (data) =>
 
 export const deleteInspectionFinding = (id) =>
   handle(supabase.from('sox_inspection_findings').delete().eq('id', id))
+
+// ── MILESTONES ────────────────────────────────────────────────
+export const getMilestones = (programmeId) =>
+  handle(supabase.from('sox_milestones').select('*').eq('programme_id', programmeId).order('due_date'))
+
+export const upsertMilestone = (data) =>
+  handle(supabase.from('sox_milestones').upsert(sanitise(data)).select().single())
+
+export const deleteMilestone = (id) =>
+  handle(supabase.from('sox_milestones').delete().eq('id', id))
+
+// ── QC REVIEWS ────────────────────────────────────────────────
+export const getQCReviews = (programmeId) =>
+  handle(supabase.from('sox_qc_reviews').select('*').eq('programme_id', programmeId).order('created_at', { ascending:false }))
+
+export const upsertQCReview = (data) =>
+  handle(supabase.from('sox_qc_reviews').upsert(sanitise(data)).select().single())
+
+export const deleteQCReview = (id) =>
+  handle(supabase.from('sox_qc_reviews').delete().eq('id', id))
+
+// ── PORTAL ACCESS ─────────────────────────────────────────────
+export const getPortalTokens = (programmeId) =>
+  handle(supabase.from('sox_portal_access').select('*').eq('programme_id', programmeId).order('created_at', { ascending:false }))
+
+export const createPortalToken = (data) =>
+  handle(supabase.from('sox_portal_access').insert(sanitise(data)).select().single())
+
+export const revokePortalToken = (id) =>
+  handle(supabase.from('sox_portal_access').update({ active:false }).eq('id', id))
+
+export const getPortalData = async (token) => {
+  // Validate token
+  const { data:access } = await supabase.from('sox_portal_access').select('*, programmes(name, fiscal_year, entity)').eq('token', token).eq('active', true).maybeSingle()
+  if (!access) return null
+  if (access.expires_at && new Date(access.expires_at) < new Date()) return null
+  const programmeId = access.programme_id
+  const [findings, deficiencies, remediation, rcm] = await Promise.all([
+    handle(supabase.from('sox_findings').select('control_id, domain, title, classification, severity, is_draft').eq('programme_id', programmeId).eq('is_draft', false)),
+    handle(supabase.from('sox_deficiency_log').select('ref, classification, status, audit_comm_req, public_disc_req').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_remediation').select('action, owner_role, target_date, status').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_rcm').select('control_id, domain, control_title, status').eq('programme_id', programmeId)),
+  ])
+  return { programme: access.programmes, findings:findings||[], deficiencies:deficiencies||[], remediation:remediation||[], rcm:rcm||[] }
+}

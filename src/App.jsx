@@ -17,6 +17,10 @@ const Analytics      = lazy_(() => import('./pages/Analytics'))
 const AuditTrail          = lazy_(() => import('./pages/AuditTrail'))
 const Templates           = lazy_(() => import('./pages/Templates'))
 const InspectionTracker   = lazy_(() => import('./pages/InspectionTracker'))
+const Schedule            = lazy_(() => import('./pages/Schedule'))
+const QCReview            = lazy_(() => import('./pages/QCReview'))
+const PortalManager       = lazy_(() => import('./pages/PortalManager'))
+const ClientPortal        = lazy_(() => import('./pages/ClientPortal'))
 const Scoping        = lazy_(() => import('./pages/plan/Scoping'))
 const RCM            = lazy_(() => import('./pages/plan/RCM'))
 const WorkpaperSetup = lazy_(() => import('./pages/plan/WorkpaperSetup'))
@@ -56,6 +60,9 @@ function Protected() {
             <Route path="/audit-trail"          element={<AuditTrail />} />
             <Route path="/templates"             element={<Templates />} />
             <Route path="/reference/inspections" element={<InspectionTracker />} />
+            <Route path="/schedule"              element={<Schedule />} />
+            <Route path="/qc-review"             element={<QCReview />} />
+            <Route path="/portal-manager"        element={<PortalManager />} />
             <Route path="/plan/scoping"         element={<Scoping />} />
             <Route path="/plan/rcm"             element={<RCM />} />
             <Route path="/plan/workpapers"      element={<WorkpaperSetup />} />
@@ -93,6 +100,7 @@ export default function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Suspense fallback={<Spinner full />}><AuthPage /></Suspense>} />
+              <Route path="/portal" element={<Suspense fallback={<Spinner full />}><ClientPortal /></Suspense>} />
               <Route path="/*"   element={<Protected />} />
             </Routes>
           </BrowserRouter>
