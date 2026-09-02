@@ -64,7 +64,16 @@ export default function WorkpaperSetup() {
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const setSPk = k => e => setSp(s=>({...s,[k]:e.target.type==='checkbox'?e.target.checked:e.target.value}))
 
-  const open = (r=BLANK) => { setForm({...BLANK,...r}); setModal(true) }
+  const open = async (r=BLANK) => {
+    setForm({...BLANK,...r})
+    setModal(true)
+    if (r.id) {
+      const sp = await getSamplePlan(r.id)
+      const items = await getTestingItems(r.id)
+      setSamplePlans(prev => ({...prev, [r.id]: sp}))
+      setItemCounts(prev => ({...prev, [r.id]: items?.length||0}))
+    }
+  }
   const openSample = async (wp) => {
     setActiveWp(wp)
     const existing = await getSamplePlan(wp.id)
@@ -76,17 +85,13 @@ export default function WorkpaperSetup() {
     if (!form.domain||!form.control_title) { toast({type:'warning',title:'Domain and title required'}); return }
     if (form.status==='Complete') {
       const wpId = form.id
-      if (!wpId) {
-        toast({type:'warning',title:'Save the workpaper first, then set sample plan before marking Complete.'})
-        return
-      }
-      const sp = await getSamplePlan(wpId)
+      if (!wpId) { toast({type:'info',title:'Save workpaper first before marking Complete.'}); return }
+      const sp = samplePlans[wpId]
+      const itemCount = itemCounts[wpId] ?? 0
       if (!sp?.final_sample) {
-        toast({type:'warning',title:'Sample plan not set',description:'Click "Set sample" on this workpaper before marking Complete.'})
+        toast({type:'warning',title:'Sample plan not set',description:'Click "Set sample" on this workpaper row before marking Complete.'})
         return
       }
-      const items = await getTestingItems(wpId)
-      const itemCount = items?.length || 0
       if (itemCount < sp.final_sample) {
         toast({type:'warning',title:'Sample size not met — AS 2315',description:`${itemCount} of ${sp.final_sample} required items tested.`})
         return
