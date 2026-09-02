@@ -37,8 +37,9 @@ export default function Assertions() {
     if (!sigForm.signatory_name||!sigForm.signature_data) { toast({type:'warning',title:'Name and signature required'}); return }
     setSaving(true)
     await createSignature({...sigForm, programme_id:programmeId, signed_at:new Date().toISOString()})
-    if (activeAssertion) {
-      await upsertAssertion({ ...activeAssertion, status:'Final', assertion_date: new Date().toISOString().slice(0,10), programme_id:programmeId })
+    if (activeAssertion?.id) {
+      const { id, created_at, ...rest } = activeAssertion
+      await upsertAssertion({ ...rest, id, status:'Final', assertion_date: new Date().toISOString().slice(0,10), programme_id:programmeId })
     }
     toast({type:'success',title:'Signed — assertion updated to Final'}); setSigModal(false); load()
     setSaving(false)
