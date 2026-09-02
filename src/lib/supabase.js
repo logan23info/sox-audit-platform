@@ -114,8 +114,16 @@ export const getSamplePlan = async (workpaperId) => {
   return data
 }
 
-export const upsertSamplePlan = (data) =>
-  handle(supabase.from('sox_sample_plan').upsert(sanitise(data)).select().single())
+export const upsertSamplePlan = async (data) => {
+  const clean = sanitise(data)
+  // Check if plan exists for this workpaper
+  const existing = await supabase.from('sox_sample_plan').select('id').eq('workpaper_id', clean.workpaper_id).maybeSingle()
+  if (existing.data?.id) {
+    const { id, created_at, workpaper_id, programme_id, ...rest } = clean
+    return handle(supabase.from('sox_sample_plan').update(rest).eq('id', existing.data.id).select().single())
+  }
+  return handle(supabase.from('sox_sample_plan').insert(clean).select().single())
+}
 
 // ── IPE VALIDATIONS ──────────────────────────────────────────
 export const getIPEValidations = (programmeId) =>

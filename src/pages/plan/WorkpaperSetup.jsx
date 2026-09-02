@@ -86,14 +86,16 @@ export default function WorkpaperSetup() {
     if (form.status==='Complete') {
       const wpId = form.id
       if (!wpId) { toast({type:'info',title:'Save workpaper first before marking Complete.'}); return }
-      const sp = samplePlans[wpId]
-      const itemCount = itemCounts[wpId] ?? 0
-      if (!sp?.final_sample) {
+      // Always fetch fresh — avoids stale state issues
+      const freshSp = await getSamplePlan(wpId)
+      const freshItems = await getTestingItems(wpId)
+      const freshCount = freshItems?.length || 0
+      if (!freshSp?.final_sample) {
         toast({type:'warning',title:'Sample plan not set',description:'Click "Set sample" on this workpaper row before marking Complete.'})
         return
       }
-      if (itemCount < sp.final_sample) {
-        toast({type:'warning',title:'Sample size not met — AS 2315',description:`${itemCount} of ${sp.final_sample} required items tested.`})
+      if (freshCount < freshSp.final_sample) {
+        toast({type:'warning',title:'Sample size not met — AS 2315',description:`${freshCount} of ${freshSp.final_sample} required items tested.`})
         return
       }
     }
