@@ -20,7 +20,7 @@ export default function Team() {
   const [role, setRole]       = useState('Auditor')
   const [saving, setSaving]   = useState(false)
 
-  const load = () => getMembers(programmeId).then(d => setMembers(d || []))
+  const load = () => getMembers(programmeId).then(d => setMembers(d || [])).catch(() => setMembers([]))
   useEffect(() => { if (programmeId) load() }, [programmeId])
 
   const invite = async () => {
@@ -71,7 +71,7 @@ export default function Team() {
           <div key={m.id} className="flex items-center justify-between px-4 py-3 gap-3">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-brand-100 dark:bg-brand-900/40 flex items-center justify-center text-xs font-bold text-brand-700 dark:text-brand-400">
-                {(m.profiles?.full_name || m.profiles?.email || '?')[0].toUpperCase()}
+                {(m.profiles?.full_name || m.profiles?.email || m.user_id || '?')[0].toUpperCase()}
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-900 dark:text-white">{m.profiles?.full_name || '—'}</div>

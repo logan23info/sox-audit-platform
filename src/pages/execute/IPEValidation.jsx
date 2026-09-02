@@ -66,7 +66,7 @@ export default function IPEValidation() {
           <Field label="Validated by"><Input value={form.validated_by} onChange={set('validated_by')} maxLength={60}/></Field>
           <Field label="Validation date"><Input type="date" value={form.validated_date||''} onChange={set('validated_date')}/></Field>
         </div>
-        <label className="flex items-center gap-2 text-sm cursor-pointer mb-4"><input type="checkbox" checked={form.validated} onChange={set('validated')}/> Mark as validated — IPE confirmed complete and accurate</label>
+        <label className="flex items-center gap-2 text-sm cursor-pointer mb-4"><input type="checkbox" checked={form.validated} onChange={e=>setForm(f=>({...f,validated:e.target.checked}))}/> Mark as validated — IPE confirmed complete and accurate</label>
         <Field label="Notes"><Textarea value={form.notes} onChange={set('notes')} maxLength={300}/></Field>
         <div className="flex justify-end gap-2"><button className="btn btn-outline" onClick={()=>setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save</button></div>
       </Modal>
