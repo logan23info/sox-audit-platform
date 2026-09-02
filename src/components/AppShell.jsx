@@ -7,7 +7,7 @@ import { signOut } from '../lib/supabase'
 import {
   LayoutDashboard, Target, FlaskConical, BarChart3, BookOpen,
   ChevronDown, ChevronRight, Sun, Moon, LogOut, Menu, X,
-  Shield, Search, Bell, Settings, ChevronLeft
+  Shield, Search, Bell, Settings, ChevronLeft, Users
 } from 'lucide-react'
 
 const NAV = [
@@ -102,6 +102,10 @@ export default function AppShell({ children }) {
         <Link to="/dashboard" className={`sidebar-link ${location.pathname === '/dashboard' ? 'active' : ''}`}>
           <LayoutDashboard size={16} />
           {open && 'Dashboard'}
+        </Link>
+        <Link to="/team" className={`sidebar-link ${location.pathname === '/team' ? 'active' : ''}`}>
+          <Users size={16} />
+          {open && 'Team'}
         </Link>
         {NAV.map((section, idx) => {
           const Icon = section.icon
