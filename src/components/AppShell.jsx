@@ -52,6 +52,10 @@ const NAV = [
       { path: '/reference/erp-guides',    label: 'ERP Guides' },
       { path: '/reference/sector',        label: 'Sector Controls' },
       { path: '/reference/interview',     label: 'Interview Prep' },
+      { path: '/reference/inspections',   label: 'PCAOB Inspections' },
+      { path: '/reference/wiki',          label: 'User Guide' },
+      { path: '/reference/faq',           label: 'FAQ' },
+      { path: '/reference/limitations',   label: 'Known Limitations' },
     ]
   },
 ]

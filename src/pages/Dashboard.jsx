@@ -140,6 +140,19 @@ export default function Dashboard() {
           <Link to="/programmes" className="btn btn-primary">Create engagement</Link>
         </div>
       )}
+      {/* Quick links */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-2">
+        {[
+          {to:'/reference/wiki', label:'User guide', desc:'End-to-end SOX engagement walkthrough', color:'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'},
+          {to:'/reference/faq', label:'FAQ', desc:'15 common questions on PCAOB standards and platform use', color:'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'},
+          {to:'/reference/limitations', label:'Known limitations', desc:'What the platform does and does not do', color:'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'},
+        ].map(l=>(
+          <Link key={l.to} to={l.to} className={`card card-hover border ${l.color} p-4`}>
+            <div className="font-semibold text-sm text-gray-900 dark:text-white mb-1">{l.label} →</div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{l.desc}</p>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }
