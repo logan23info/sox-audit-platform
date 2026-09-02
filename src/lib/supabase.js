@@ -96,8 +96,14 @@ export const deleteRCM = (id) =>
 export const getWorkpapers = (programmeId) =>
   handle(supabase.from('sox_workpaper_shells').select('*').eq('programme_id', programmeId).order('domain'))
 
-export const upsertWorkpaper = (data) =>
-  handle(supabase.from('sox_workpaper_shells').upsert(sanitise(data)).select().single())
+export const upsertWorkpaper = async (data) => {
+  const clean = sanitise(data)
+  if (clean.id) {
+    const { id, created_at, ...rest } = clean
+    return handle(supabase.from('sox_workpaper_shells').update(rest).eq('id', id).select().single())
+  }
+  return handle(supabase.from('sox_workpaper_shells').insert(clean).select().single())
+}
 
 export const deleteWorkpaper = (id) =>
   handle(supabase.from('sox_workpaper_shells').delete().eq('id', id))
