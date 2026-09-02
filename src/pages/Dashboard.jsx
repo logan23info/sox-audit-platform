@@ -51,8 +51,10 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!programmeId) return
-    setLoading(true)
-    getDashboardStats(programmeId).then(setStats).finally(() => setLoading(false))
+    const fetch = () => { setLoading(true); getDashboardStats(programmeId).then(setStats).finally(() => setLoading(false)) }
+    fetch()
+    const interval = setInterval(fetch, 30000)
+    return () => clearInterval(interval)
   }, [programmeId])
 
   const mwCount  = stats?.deficiencies?.filter(d => d.classification === 'MW').length ?? 0

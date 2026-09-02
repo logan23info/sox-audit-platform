@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts'
-import { TrendingUp, Bot, Loader, AlertTriangle, CheckCircle, Shield } from 'lucide-react'
+import { TrendingUp, Bot, Loader, AlertTriangle, CheckCircle, Shield, Download } from 'lucide-react'
 import { getAnalyticsData, callAI } from '../lib/supabase'
+import { exportPDF } from '../lib/exportUtils'
 import { useProgramme } from '../context/ProgrammeContext'
 import { useToast } from '../context/ToastContext'
 import { DOMAINS } from '../constants'
@@ -88,10 +89,35 @@ export default function Analytics() {
     setAiLoading(false)
   }
 
+  const doExportPDF = () => {
+    exportPDF({
+      filename: `${programme?.name||'SOX'}_Analytics_FY${programme?.fiscal_year||''}`.replace(/\s+/g,'_'),
+      title: `SOX Audit Analytics — ${programme?.name||''}`,
+      subtitle: `FY${programme?.fiscal_year||''} · Generated ${new Date().toLocaleDateString()}`,
+      sections: [
+        { heading:'Key Indicators', columns:['Metric','Value'], rows:[
+          ['Controls untested', `${untestedPct}%`],
+          ['Open Material Weaknesses', mwCount],
+          ['Open Significant Deficiencies', sdCount],
+          ['Exception rate', `${exceptionRate}%`],
+          ['IPE validated', `${ipeValidated}/${ipeTotal}`],
+          ['Total test items', totalTests],
+          ['JE segments', data?.jeSegments.length||0],
+        ]},
+        { heading:'Control Status by Domain', columns:['Domain','Effective','In Progress','Ineffective','Not Tested'], rows: rcmByDomain.map(r=>[r.domain, r.Effective, r['In Progress'], r.Ineffective, r['Not Tested']]) },
+        { heading:'Deficiency Breakdown', columns:['Classification','Count'], rows: defByClass.map(d=>[d.name, d.value]) },
+        { heading:'Remediation Status', columns:['Status','Count'], rows: remByStatus.map(r=>[r.name, r.value]) },
+        { heading:'Vendor SOC 1 Reliance', columns:['Decision','Count'], rows: vendorReliance.map(v=>[v.name, v.value]) },
+        ...(ai ? [{ heading:'AI Narrative', text: `Opinion: ${ai.overall_opinion}\n\n${ai.executive_summary}` }] : []),
+      ]
+    })
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <PageHeader eyebrow={<><TrendingUp size={12}/>Analytics</>} title="Audit analytics"
-        subtitle={`${programme?.name} · FY${programme?.fiscal_year} · ${totalControls} controls · ${data?.findings.length} findings`} />
+        subtitle={`${programme?.name} · FY${programme?.fiscal_year} · ${totalControls} controls · ${data?.findings.length} findings`}
+        actions={<button className="btn btn-outline btn-sm" onClick={doExportPDF}><Download size={13}/>Export PDF</button>} />
 
       {/* KPI strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">

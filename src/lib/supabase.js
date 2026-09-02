@@ -321,3 +321,22 @@ export const getAnalyticsData = async (programmeId) => {
   ])
   return { rcm: rcm||[], findings: findings||[], deficiencies: deficiencies||[], remediation: remediation||[], testingItems: testingItems||[], jeSegments: jeSegments||[], vendors: vendors||[], ipe: ipe||[] }
 }
+
+// ── NOTIFICATIONS ────────────────────────────────────────────
+export const getNotifications = async (programmeId) => {
+  const today = new Date().toISOString().slice(0,10)
+  const [overdueRem, openMW, openSD, unvalidatedIPE, unsignedAssertions] = await Promise.all([
+    handle(supabase.from('sox_remediation').select('id, action, target_date, status').eq('programme_id', programmeId).neq('status','Closed').lt('target_date', today)),
+    handle(supabase.from('sox_deficiency_log').select('id, ref, classification').eq('programme_id', programmeId).eq('classification','MW').eq('status','Open')),
+    handle(supabase.from('sox_deficiency_log').select('id, ref, classification').eq('programme_id', programmeId).eq('classification','SD').eq('status','Open')),
+    handle(supabase.from('sox_ipe_validations').select('id, report_name').eq('programme_id', programmeId).eq('validated', false)),
+    handle(supabase.from('sox_mgmt_assertions').select('id, assertion_type, fiscal_year, status').eq('programme_id', programmeId).eq('status','Draft')),
+  ])
+  const notifications = []
+  ;(overdueRem||[]).forEach(r => notifications.push({ id:r.id, type:'danger', title:'Overdue remediation', body: r.action?.slice(0,60), link:'/manage/remediation' }))
+  ;(openMW||[]).forEach(r => notifications.push({ id:r.id, type:'danger', title:`Material weakness open — ${r.ref}`, body:'Public 10-K disclosure required', link:'/execute/deficiencies' }))
+  ;(openSD||[]).forEach(r => notifications.push({ id:r.id, type:'warning', title:`Significant deficiency open — ${r.ref}`, body:'Audit committee communication required', link:'/execute/deficiencies' }))
+  ;(unvalidatedIPE||[]).forEach(r => notifications.push({ id:r.id, type:'warning', title:'IPE not validated', body: r.report_name?.slice(0,60), link:'/execute/ipe' }))
+  ;(unsignedAssertions||[]).forEach(r => notifications.push({ id:r.id, type:'info', title:`§${r.assertion_type} assertion unsigned`, body:`FY${r.fiscal_year} — status: ${r.status}`, link:'/manage/assertions' }))
+  return notifications
+}

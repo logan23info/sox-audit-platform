@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import NotificationCenter from './NotificationCenter'
 import { useTheme } from '../context/ThemeContext'
 import { useProgramme } from '../context/ProgrammeContext'
 import { signOut } from '../lib/supabase'
@@ -199,6 +200,7 @@ export default function AppShell({ children }) {
           </div>
           <div className="flex items-center gap-1.5">
             <button className="btn-ghost p-1.5 rounded-lg" title="Search"><Search size={16} /></button>
+            <NotificationCenter />
             <button onClick={toggle} className="btn-ghost p-1.5 rounded-lg" title="Toggle theme">
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>

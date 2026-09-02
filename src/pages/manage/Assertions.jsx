@@ -29,7 +29,13 @@ export default function Assertions() {
 
   const save = async () => {
     setSaving(true)
-    await upsertAssertion({...form, programme_id:programmeId})
+    if (form.id) {
+      await updateAssertionStatus(form.id, form.status || 'Draft', form.assertion_date || null)
+      // Also update other fields via upsert
+      await upsertAssertion({...form, programme_id:programmeId})
+    } else {
+      await upsertAssertion({...form, programme_id:programmeId})
+    }
     toast({type:'success',title:'Assertion saved'}); setModal(false); load()
     setSaving(false)
   }
