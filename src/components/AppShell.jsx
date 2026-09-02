@@ -8,7 +8,7 @@ import { signOut } from '../lib/supabase'
 import {
   LayoutDashboard, Target, FlaskConical, BarChart3, BookOpen,
   ChevronDown, ChevronRight, Sun, Moon, LogOut, Menu, X,
-  Shield, Search, Bell, Settings, ChevronLeft, Users, TrendingUp
+  Shield, Search, Bell, Settings, ChevronLeft, Users, TrendingUp, History
 } from 'lucide-react'
 
 const NAV = [
@@ -111,6 +111,10 @@ export default function AppShell({ children }) {
         <Link to="/analytics" className={`sidebar-link ${location.pathname === '/analytics' ? 'active' : ''}`}>
           <TrendingUp size={16} />
           {open && 'Analytics'}
+        </Link>
+        <Link to="/audit-trail" className={`sidebar-link ${location.pathname === '/audit-trail' ? 'active' : ''}`}>
+          <History size={16} />
+          {open && 'Audit Trail'}
         </Link>
         {NAV.map((section, idx) => {
           const Icon = section.icon

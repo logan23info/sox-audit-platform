@@ -340,3 +340,37 @@ export const getNotifications = async (programmeId) => {
   ;(unsignedAssertions||[]).forEach(r => notifications.push({ id:r.id, type:'info', title:`§${r.assertion_type} assertion unsigned`, body:`FY${r.fiscal_year} — status: ${r.status}`, link:'/manage/assertions' }))
   return notifications
 }
+
+// ── MULTI-ENGAGEMENT COMPARISON ──────────────────────────────
+export const getComparisonData = async (programmeIds) => {
+  const results = await Promise.all(programmeIds.map(async (pid) => {
+    const [prog, rcm, findings, deficiencies, remediation] = await Promise.all([
+      handle(supabase.from('programmes').select('name, fiscal_year, sector').eq('id', pid).single()),
+      handle(supabase.from('sox_rcm').select('status').eq('programme_id', pid)),
+      handle(supabase.from('sox_findings').select('classification').eq('programme_id', pid)),
+      handle(supabase.from('sox_deficiency_log').select('classification, status').eq('programme_id', pid)),
+      handle(supabase.from('sox_remediation').select('status').eq('programme_id', pid)),
+    ])
+    return {
+      id: pid,
+      name: prog?.name || pid,
+      fiscal_year: prog?.fiscal_year || '—',
+      sector: prog?.sector || '—',
+      controls_total: rcm?.length || 0,
+      controls_tested: rcm?.filter(r => r.status !== 'Not Tested').length || 0,
+      controls_effective: rcm?.filter(r => r.status === 'Effective').length || 0,
+      findings_total: findings?.length || 0,
+      major_nc: findings?.filter(f => f.classification === 'Major NC').length || 0,
+      minor_nc: findings?.filter(f => f.classification === 'Minor NC').length || 0,
+      mw_open: deficiencies?.filter(d => d.classification === 'MW' && d.status === 'Open').length || 0,
+      sd_open: deficiencies?.filter(d => d.classification === 'SD' && d.status === 'Open').length || 0,
+      rem_closed: remediation?.filter(r => r.status === 'Closed').length || 0,
+      rem_open: remediation?.filter(r => r.status !== 'Closed').length || 0,
+    }
+  }))
+  return results
+}
+
+// ── AUDIT LOG ────────────────────────────────────────────────
+export const getAuditLog = (programmeId, limit=100) =>
+  handle(supabase.from('sox_audit_log').select('*').eq('programme_id', programmeId).order('created_at', { ascending:false }).limit(limit))
