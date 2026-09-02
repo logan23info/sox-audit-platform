@@ -16,6 +16,7 @@ export default function Assertions() {
   const [sigs, setSigs]   = useState([])
   const [modal, setModal] = useState(false)
   const [sigModal, setSigModal] = useState(false)
+  const [activeAssertion, setActiveAssertion] = useState(null)
   const [form, setForm]   = useState(BLANK)
   const [sigForm, setSigForm] = useState({ signatory_name:'', signatory_title:'', document_type:'assertion', signature_data:'' })
   const [saving, setSaving] = useState(false)
@@ -62,7 +63,7 @@ export default function Assertions() {
                 <p className="text-xs text-gray-400">CEO: {r.ceo_name||'—'} · CFO: {r.cfo_name||'—'} · Date: {r.assertion_date||'—'}</p>
               </div>
               <div className="flex gap-2">
-                <button className="btn btn-outline btn-sm" onClick={()=>setSigModal(true)}>E-sign</button>
+                <button className="btn btn-outline btn-sm" onClick={()=>{setActiveAssertion(r);setSigModal(true)}}>E-sign</button>
                 <button className="btn btn-outline btn-sm" onClick={()=>open(r)}>Edit</button>
               </div>
             </div>
