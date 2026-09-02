@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FileCheck, Plus } from 'lucide-react'
-import { getAssertions, upsertAssertion, updateAssertionStatus, getSignatures, createSignature } from '../../lib/supabase'
+import { FileCheck, Plus, Bot, Loader } from 'lucide-react'
+import { getAssertions, upsertAssertion, updateAssertionStatus, getSignatures, createSignature, callAI } from '../../lib/supabase'
 import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import PageHeader from '../../components/PageHeader'
@@ -52,6 +52,24 @@ export default function Assertions() {
 
   const statusColor = s => s==='Final'?'badge-green':s==='Under Review'?'badge-blue':'badge-gray'
 
+  const generateRepLetter = async (assertion) => {
+    setGenLetter(true)
+    try {
+      const prompt = `[ROLE] SOX audit documentation specialist.
+[OUTPUT] Plain text only — a professional management representation letter for §${assertion.assertion_type} sub-certification.
+[INSTRUCTIONS] Draft a concise management representation letter (3-4 paragraphs) for CEO/CFO sub-certification. Include: ICFR effectiveness statement, MW disclosure if present, period covered. Mark as DRAFT.`
+      const msg = `Assertion type: §${assertion.assertion_type}
+Fiscal year: ${assertion.fiscal_year}
+ICFR effective: ${assertion.icfr_effective===true?'Yes':assertion.icfr_effective===false?'No':'Not assessed'}
+Material weakness: ${assertion.has_mw?'Yes — '+assertion.mw_desc:'No'}
+CEO: ${assertion.ceo_name||'[CEO Name]'} | CFO: ${assertion.cfo_name||'[CFO Name]'}`
+      const res = await callAI({ systemPrompt:prompt, userMessage:msg })
+      setLetter(res.text)
+      toast({ type:'success', title:'Letter drafted — DRAFT, review before use' })
+    } catch(e) { toast({ type:'error', title:'AI error', description:e.message }) }
+    setGenLetter(false)
+  }
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <PageHeader eyebrow={<><FileCheck size={12}/>Manage · Assertions</>} title="§302 / §404 assertion tracker"
@@ -82,6 +100,15 @@ export default function Assertions() {
         {rows.length===0&&<div className="card text-center py-10 border-dashed"><p className="text-sm text-gray-400">No assertions yet. Create a §302 or §404 certification.</p></div>}
       </div>
 
+      {letter&&(
+        <div className="card mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2"><Bot size={14} className="text-brand-600"/><h3 className="font-semibold text-sm">Management rep letter — DRAFT</h3></div>
+            <button className="btn btn-ghost btn-sm text-xs" onClick={()=>setLetter('')}>Clear</button>
+          </div>
+          <pre className="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed font-sans border border-gray-200 dark:border-gray-700 rounded-lg p-3 bg-gray-50 dark:bg-dark-surface-3">{letter}</pre>
+        </div>
+      )}
       {sigs.length>0&&(
         <div className="card">
           <h3 className="text-sm font-semibold mb-3">Signatures ({sigs.length})</h3>

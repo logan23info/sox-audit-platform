@@ -5,6 +5,7 @@ import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import { DOMAINS, AI_CLASSIFICATIONS, AI_SEVERITIES, DEFICIENCY_TRUTH_TABLE } from '../../constants'
 import PageHeader from '../../components/PageHeader'
+import EvidenceUpload from '../../components/EvidenceUpload'
 import RecordTable from '../../components/RecordTable'
 import Modal from '../../components/Modal'
 import { Field, Input, Select, Textarea } from '../../components/FormField'
@@ -163,6 +164,7 @@ Assess this evidence against the control objective. Return JSON schema exactly.`
         <div className="flex items-center gap-3 mb-4">
           <label className="flex items-center gap-2 text-sm cursor-pointer"><input type="checkbox" checked={!form.is_draft} onChange={e=>setForm(f=>({...f,is_draft:!e.target.checked}))}/><CheckCircle size={14} className="text-green-500"/> Mark as signed off (removes DRAFT status)</label>
         </div>
+        {form.id && <EvidenceUpload programmeId={programmeId} recordId={form.id} label="Supporting evidence files"/>}
         <div className="flex justify-end gap-2"><button className="btn btn-outline" onClick={()=>setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save finding</button></div>
       </Modal>
     </div>

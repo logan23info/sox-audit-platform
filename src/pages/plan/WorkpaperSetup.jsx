@@ -5,11 +5,12 @@ import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import { DOMAINS, SAMPLE_TABLE, FREQUENCIES, RISK_RATINGS } from '../../constants'
 import PageHeader from '../../components/PageHeader'
+import EvidenceUpload from '../../components/EvidenceUpload'
 import RecordTable from '../../components/RecordTable'
 import Modal from '../../components/Modal'
 import { Field, Input, Select, Textarea } from '../../components/FormField'
 
-const BLANK = { domain:'LA', control_id:'', control_title:'', population_src:'', population_cnt:'', ipe_validated:false, preparer:'', reviewer:'', conclusion:'', status:'Not Started' }
+const BLANK = { domain:'LA', control_id:'', control_title:'', population_src:'', population_cnt:'', ipe_validated:false, preparer:'', reviewer:'', walkthrough_notes:'', conclusion:'', status:'Not Started' }
 const WP_STATUSES = ['Not Started','In Progress','Complete','Reviewed']
 
 // AS 2315 sample size enforcement
@@ -134,8 +135,10 @@ export default function WorkpaperSetup() {
           <Field label="Preparer"><Input value={form.preparer} onChange={set('preparer')} maxLength={60}/></Field>
           <Field label="Reviewer"><Input value={form.reviewer} onChange={set('reviewer')} maxLength={60}/></Field>
         </div>
+        <Field label="Walk-through notes" hint="Document the control walk-through: who you met, what you observed, process steps confirmed."><Textarea value={form.walkthrough_notes||''} onChange={set('walkthrough_notes')} placeholder="Walk-through performed with [name/role] on [date]. Observed [control steps]. Confirmed [evidence]." maxLength={1000}/></Field>
         <Field label="Conclusion"><Textarea value={form.conclusion} onChange={set('conclusion')} placeholder="Based on procedures performed…" maxLength={500}/></Field>
-        <div className="flex justify-end gap-2"><button className="btn btn-outline" onClick={()=>setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save</button></div>
+        {form.id && <EvidenceUpload programmeId={programmeId} recordId={form.id} label="Workpaper evidence files"/>}
+        <div className="flex justify-end gap-2 mt-4"><button className="btn btn-outline" onClick={()=>setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save</button></div>
       </Modal>
 
       <Modal open={sampleModal} onClose={()=>setSampleModal(false)} title="Sample plan — AS 2315">

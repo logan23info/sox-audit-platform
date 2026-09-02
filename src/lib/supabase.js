@@ -374,3 +374,48 @@ export const getComparisonData = async (programmeIds) => {
 // ── AUDIT LOG ────────────────────────────────────────────────
 export const getAuditLog = (programmeId, limit=100) =>
   handle(supabase.from('sox_audit_log').select('*').eq('programme_id', programmeId).order('created_at', { ascending:false }).limit(limit))
+
+// ── EVIDENCE UPLOAD ──────────────────────────────────────────
+export const uploadEvidence = async (file, programmeId, recordId) => {
+  const ext = file.name.split('.').pop()
+  const path = `${programmeId}/${recordId}/${Date.now()}.${ext}`
+  const { data, error } = await supabase.storage.from('sox-evidence').upload(path, file, { upsert: false })
+  if (error) { logError(error.message); return null }
+  return data.path
+}
+
+export const getEvidenceFiles = async (programmeId, recordId) => {
+  const { data, error } = await supabase.storage.from('sox-evidence').list(`${programmeId}/${recordId}`)
+  if (error) { logError(error.message); return [] }
+  return data || []
+}
+
+export const getEvidenceUrl = async (path) => {
+  const { data } = await supabase.storage.from('sox-evidence').createSignedUrl(path, 3600)
+  return data?.signedUrl || null
+}
+
+export const deleteEvidence = async (path) => {
+  const { error } = await supabase.storage.from('sox-evidence').remove([path])
+  return !error
+}
+
+// ── PROGRAMME TEMPLATES ───────────────────────────────────────
+export const getTemplates = (programmeId) =>
+  handle(supabase.from('sox_programme_templates').select('*').eq('programme_id', programmeId).order('domain'))
+
+export const upsertTemplate = (data) =>
+  handle(supabase.from('sox_programme_templates').upsert(sanitise(data)).select().single())
+
+export const deleteTemplate = (id) =>
+  handle(supabase.from('sox_programme_templates').delete().eq('id', id))
+
+// ── PCAOB INSPECTION FINDINGS ─────────────────────────────────
+export const getInspectionFindings = (programmeId) =>
+  handle(supabase.from('sox_inspection_findings').select('*').eq('programme_id', programmeId).order('pcaob_year', { ascending: false }))
+
+export const upsertInspectionFinding = (data) =>
+  handle(supabase.from('sox_inspection_findings').upsert(sanitise(data)).select().single())
+
+export const deleteInspectionFinding = (id) =>
+  handle(supabase.from('sox_inspection_findings').delete().eq('id', id))

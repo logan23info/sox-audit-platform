@@ -8,7 +8,7 @@ import { signOut } from '../lib/supabase'
 import {
   LayoutDashboard, Target, FlaskConical, BarChart3, BookOpen,
   ChevronDown, ChevronRight, Sun, Moon, LogOut, Menu, X,
-  Shield, Search, Bell, Settings, ChevronLeft, Users, TrendingUp, History
+  Shield, Search as SearchIcon, Bell, Settings, ChevronLeft, Users, TrendingUp, History, ClipboardList
 } from 'lucide-react'
 
 const NAV = [
@@ -116,6 +116,10 @@ export default function AppShell({ children }) {
           <History size={16} />
           {open && 'Audit Trail'}
         </Link>
+        <Link to="/templates" className={`sidebar-link ${location.pathname === '/templates' ? 'active' : ''}`}>
+          <ClipboardList size={16} />
+          {open && 'Templates'}
+        </Link>
         {NAV.map((section, idx) => {
           const Icon = section.icon
           const isExpanded = expanded === idx
@@ -203,7 +207,7 @@ export default function AppShell({ children }) {
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <button className="btn-ghost p-1.5 rounded-lg" title="Search"><Search size={16} /></button>
+            <button className="btn-ghost p-1.5 rounded-lg" title="Search"><SearchIcon size={16} /></button>
             <NotificationCenter />
             <button onClick={toggle} className="btn-ghost p-1.5 rounded-lg" title="Toggle theme">
               {dark ? <Sun size={16} /> : <Moon size={16} />}

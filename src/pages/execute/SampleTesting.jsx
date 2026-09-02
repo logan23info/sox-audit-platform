@@ -81,6 +81,13 @@ Attributes tested: ${items[0]?[items[0].attribute_1,items[0].attribute_2,items[0
             <div>
               <h3 className="font-semibold">{activeWp.control_title}</h3>
               <p className="text-xs text-gray-400">{items.length} items tested · {exceptions} exception{exceptions!==1?'s':''}</p>
+              {exceptions>0 && activeWp?.population_cnt && (
+                <div className="mt-1 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-700 dark:text-amber-300">
+                  <strong>Exception extrapolation (AS 2315):</strong>{' '}
+                  {Math.round((exceptions/items.length)*activeWp.population_cnt)} estimated exceptions in population of {activeWp.population_cnt}
+                  {' '}({Math.round((exceptions/items.length)*100)}% error rate)
+                </div>
+              )}
               {exceptions>0&&<span className="badge badge-red mt-1">{exceptions} exception(s) — evaluate for deficiency</span>}
             </div>
             <div className="flex gap-2">
