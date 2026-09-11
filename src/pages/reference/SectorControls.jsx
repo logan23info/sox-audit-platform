@@ -1,6 +1,9 @@
-import { Layers } from 'lucide-react'
+import { Layers, Plus, Loader } from 'lucide-react'
 import { useState } from 'react'
 import { SECTORS } from '../../constants'
+import { promoteSectorVariantToRCM } from '../../lib/supabase'
+import { useProgramme } from '../../context/ProgrammeContext'
+import { useToast } from '../../context/ToastContext'
 import PageHeader from '../../components/PageHeader'
 const SECTOR_DETAIL = {
   financial_services: [{control:'Trade surveillance logs',basis:'FFIEC'},{control:'Algo trading change controls',basis:'OCC'},{control:'Reg reporting system ITGC',basis:'FDIC / Fed'}],
@@ -13,21 +16,48 @@ const SECTOR_DETAIL = {
   general: [{control:'Standard ITGC — see RCM',basis:'AS 2201'}],
 }
 export default function SectorControls() {
-  const [sector, setSector] = useState('financial_services')
+  const { programmeId, programme, isAuditor } = useProgramme()
+  const { toast } = useToast()
+  const [sector, setSector] = useState(programme?.sector && programme.sector !== 'general' ? programme.sector : 'financial_services')
+  const [adding, setAdding] = useState(null)
+
+  const addToRCM = async (row, idx) => {
+    if (!programmeId) { toast({type:'warning',title:'Select an engagement first'}); return }
+    setAdding(idx)
+    const created = await promoteSectorVariantToRCM({
+      control_id:  `${sector.slice(0,3).toUpperCase()}-${String(idx+1).padStart(2,'0')}`,
+      domain:      'LA',
+      additional_req: row.control,
+      standard_basis: row.basis,
+      sector,
+    }, programmeId)
+    if (created) toast({type:'success',title:'Added to RCM',description:`${row.control.slice(0,50)} — review domain and frequency in the RCM.`})
+    setAdding(null)
+  }
   const detail = SECTOR_DETAIL[sector]||[]
   const meta = SECTORS.find(s=>s.id===sector)
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <PageHeader eyebrow={<><Layers size={12}/>Reference · Sector controls</>} title="Sector-specific control requirements"
-        subtitle="Additional ITGC controls required by sector-specific regulations. Overlay on base RCM." />
+        subtitle="Additional ITGC controls required by sector-specific regulations. Add any that apply directly to your RCM." />
       <div className="flex gap-2 flex-wrap mb-5">
         {SECTORS.filter(s=>s.id!=='general').map(s=><button key={s.id} onClick={()=>setSector(s.id)} className={`btn btn-sm ${sector===s.id?'btn-primary':'btn-outline'}`}>{s.label}</button>)}
       </div>
       {meta&&<div className="flex gap-2 flex-wrap mb-4">{meta.standards.map(s=><span key={s} className="badge badge-blue">{s}</span>)}</div>}
       <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
         <table className="data-table">
-          <thead><tr><th>Additional control requirement</th><th>Standard basis</th></tr></thead>
-          <tbody>{detail.map((r,i)=><tr key={i}><td className="text-gray-900 dark:text-white">{r.control}</td><td><span className="mono text-xs">{r.basis}</span></td></tr>)}</tbody>
+          <thead><tr><th>Additional control requirement</th><th>Standard basis</th>{isAuditor&&<th></th>}</tr></thead>
+          <tbody>{detail.map((r,i)=>(
+            <tr key={i}>
+              <td className="text-gray-900 dark:text-white">{r.control}</td>
+              <td><span className="mono text-xs">{r.basis}</span></td>
+              {isAuditor&&<td className="w-28">
+                <button className="btn btn-outline btn-sm" onClick={()=>addToRCM(r,i)} disabled={adding===i}>
+                  {adding===i?<Loader size={12} className="animate-spin"/>:<Plus size={12}/>}Add to RCM
+                </button>
+              </td>}
+            </tr>
+          ))}</tbody>
         </table>
       </div>
     </div>

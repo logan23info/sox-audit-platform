@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Search, Plus } from 'lucide-react'
 import { getInspectionFindings, upsertInspectionFinding, deleteInspectionFinding } from '../lib/supabase'
+import { useRecords } from '../hooks/useRecords'
 import { useProgramme } from '../context/ProgrammeContext'
 import { useToast } from '../context/ToastContext'
 import PageHeader from '../components/PageHeader'
@@ -27,26 +28,14 @@ const BLANK = { pcaob_year: new Date().getFullYear(), finding_area:'', descripti
 export default function InspectionTracker() {
   const { programmeId, isAuditor } = useProgramme()
   const { toast } = useToast()
-  const [rows, setRows]     = useState([])
-  const [modal, setModal]   = useState(false)
-  const [form, setForm]     = useState(BLANK)
-  const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter]   = useState('all')
 
-  const load = () => getInspectionFindings(programmeId).then(d=>setRows(d||[]))
-  useEffect(()=>{ if(programmeId) load() },[programmeId])
-
-  const set = k => e => setForm(f=>({...f,[k]:e.target.type==='checkbox'?e.target.checked:e.target.value}))
-  const open = (r=BLANK) => { setForm({...BLANK,...r}); setModal(true) }
-
-  const save = async () => {
-    if (!form.finding_area?.trim()) { toast({type:'warning',title:'Finding area required', description:'Enter a finding area before saving'}); return }
-    setSaving(true)
-    await upsertInspectionFinding({...form, programme_id:programmeId})
-    toast({type:'success',title:'Saved'}); setModal(false); load()
-    setSaving(false)
-  }
+  const r = useRecords({
+    get: getInspectionFindings, upsert: upsertInspectionFinding, del: deleteInspectionFinding,
+    blank: BLANK, required: ['finding_area'], label: 'Finding',
+  })
+  const { rows, modal, form, saving, set, open, close, save, remove, reload: load } = r
 
   const seedKnown = async () => {
     setSeeding(true)
@@ -87,10 +76,10 @@ export default function InspectionTracker() {
       <div className="alert-info mb-4"><span className="text-xs">Source: pcaobus.org/inspections — [SAMPLE] data loaded from public inspection reports. Verify against current PCAOB releases before relying on this list.</span></div>
 
       <div className="card p-0 overflow-hidden">
-        <RecordTable cols={cols} rows={visible} onEdit={isAuditor?open:null} onDelete={isAuditor?id=>deleteInspectionFinding(id).then(load):null} emptyMsg="No findings. Load known PCAOB findings or add manually."/>
+        <RecordTable cols={cols} rows={visible} onEdit={isAuditor?open:null} onDelete={isAuditor?remove:null} emptyMsg="No findings. Load known PCAOB findings or add manually."/>
       </div>
 
-      <Modal open={modal} onClose={()=>setModal(false)} title="PCAOB inspection finding" size="max-w-2xl">
+      <Modal open={modal} onClose={close} title="PCAOB inspection finding" size="max-w-2xl">
         <div className="grid grid-cols-2 gap-3">
           <Field label="PCAOB year"><Input type="number" value={form.pcaob_year} onChange={set('pcaob_year')}/></Field>
           <Field label="Finding area"><Input placeholder="IPE Validation / JE Testing / Sampling" value={form.finding_area} onChange={set('finding_area')} maxLength={80}/></Field>
@@ -99,7 +88,7 @@ export default function InspectionTracker() {
         <label className="flex items-center gap-2 text-sm cursor-pointer mb-4"><input type="checkbox" checked={form.applies_to_us} onChange={set('applies_to_us')}/><span className="font-medium text-red-600">This finding applies to our methodology</span></label>
         {form.applies_to_us&&<Field label="Mitigation"><Textarea value={form.mitigation||''} onChange={set('mitigation')} placeholder="Document how your methodology addresses this finding…" maxLength={500}/></Field>}
         <Field label="Status"><Select value={form.status} onChange={set('status')} options={['Open','Mitigated','Closed','Not Applicable']}/></Field>
-        <div className="flex justify-end gap-2"><button className="btn btn-outline" onClick={()=>setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save</button></div>
+        <div className="flex justify-end gap-2"><button className="btn btn-outline" onClick={close}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save</button></div>
       </Modal>
     </div>
   )

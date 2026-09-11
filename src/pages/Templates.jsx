@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { ClipboardList, Plus, Copy } from 'lucide-react'
 import { getTemplates, upsertTemplate, deleteTemplate, upsertWorkpaper } from '../lib/supabase'
+import { useRecords } from '../hooks/useRecords'
 import { useProgramme } from '../context/ProgrammeContext'
 import { useToast } from '../context/ToastContext'
 import { DOMAINS } from '../constants'
@@ -23,26 +24,14 @@ const BLANK = { domain:'LA', template_name:'', objectives:'', test_steps:'', att
 export default function Templates() {
   const { programmeId, isAuditor } = useProgramme()
   const { toast } = useToast()
-  const [rows, setRows]   = useState([])
-  const [modal, setModal] = useState(false)
-  const [form, setForm]   = useState(BLANK)
-  const [saving, setSaving] = useState(false)
   const [seeding, setSeeding]   = useState(false)
   const [confirmSeed, setConfirmSeed] = useState(false)
 
-  const load = () => getTemplates(programmeId).then(d=>setRows(d||[]))
-  useEffect(()=>{ if(programmeId) load() },[programmeId])
-
-  const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
-  const open = (r=BLANK) => { setForm({...BLANK,...r}); setModal(true) }
-
-  const save = async () => {
-    if (!form.template_name.trim()) { toast({type:'warning',title:'Template name required', description:'Enter a name before saving'}); return }
-    setSaving(true)
-    await upsertTemplate({...form, programme_id:programmeId})
-    toast({type:'success',title:'Template saved'}); setModal(false); load()
-    setSaving(false)
-  }
+  const r = useRecords({
+    get: getTemplates, upsert: upsertTemplate, del: deleteTemplate,
+    blank: BLANK, required: ['template_name'], label: 'Template',
+  })
+  const { rows, modal, form, saving, set, open, close, save, remove, reload: load } = r
 
   const seedBase = async () => {
     if (rows.length > 0 && !confirmSeed) { setConfirmSeed(true); return }
@@ -101,9 +90,9 @@ export default function Templates() {
         </div>
       )}
       <div className="card p-0 overflow-hidden">
-        <RecordTable cols={cols} rows={rows} onEdit={isAuditor?open:null} onDelete={isAuditor?id=>deleteTemplate(id).then(load):null} emptyMsg="No templates. Seed base templates or create your own."/>
+        <RecordTable cols={cols} rows={rows} onEdit={isAuditor?open:null} onDelete={isAuditor?remove:null} emptyMsg="No templates. Seed base templates or create your own."/>
       </div>
-      <Modal open={modal} onClose={()=>setModal(false)} title="Audit programme template" size="max-w-2xl">
+      <Modal open={modal} onClose={close} title="Audit programme template" size="max-w-2xl">
         <div className="grid grid-cols-2 gap-3">
           <Field label="Domain"><Select value={form.domain} onChange={set('domain')} options={DOMAINS.map(d=>({value:d.id,label:d.id+' — '+d.label}))}/></Field>
           <Field label="Template name"><Input value={form.template_name} onChange={set('template_name')} placeholder="User access review — quarterly" maxLength={100}/></Field>
@@ -111,7 +100,7 @@ export default function Templates() {
         <Field label="Objectives"><Textarea value={form.objectives} onChange={set('objectives')} maxLength={500}/></Field>
         <Field label="Test steps (one per line)"><Textarea value={form.test_steps} onChange={set('test_steps')} className="min-h-[100px]" maxLength={2000}/></Field>
         <Field label="Test attributes (one per line)"><Textarea value={form.attributes} onChange={set('attributes')} maxLength={500}/></Field>
-        <div className="flex justify-end gap-2"><button className="btn btn-outline" onClick={()=>setModal(false)}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save</button></div>
+        <div className="flex justify-end gap-2"><button className="btn btn-outline" onClick={close}>Cancel</button><button className="btn btn-primary" onClick={save} disabled={saving}>Save</button></div>
       </Modal>
     </div>
   )

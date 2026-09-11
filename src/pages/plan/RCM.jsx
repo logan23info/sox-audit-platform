@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Plus, Shield, Download } from 'lucide-react'
-import { getRCM, upsertRCM, deleteRCM } from '../../lib/supabase'
+import { Plus, Shield, Upload } from 'lucide-react'
+import { getRCM, upsertRCM, deleteRCM, getEntities } from '../../lib/supabase'
 import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import { DOMAINS, CONTROL_TYPES, ASSERTIONS, RISK_RATINGS, FREQUENCIES } from '../../constants'
@@ -8,6 +8,7 @@ import PageHeader from '../../components/PageHeader'
 import RecordTable from '../../components/RecordTable'
 import Modal from '../../components/Modal'
 import { Field, Input, Select, Textarea } from '../../components/FormField'
+import ImportModal from '../../components/ImportModal'
 
 // Base RCM controls seeded from SOX reference site KB
 const BASE_CONTROLS = [
@@ -29,7 +30,7 @@ const BASE_CONTROLS = [
   {control_id:'JE-02',domain:'JE',control_title:'After-hours JE review',risk:'Fraudulent JEs posted outside business hours',risk_rating:'High',control_type:'Detective',frequency:'Per period',assertion:['Authorization'],evidence_req:'After-hours JE sample with supporting docs + approver ≠ preparer',pcaob_ref:'AS 2110.61, AS 2201 Para .14'},
 ]
 
-const BLANK = { control_id:'', domain:'LA', control_title:'', risk:'', risk_rating:'High', control_type:'Preventive', frequency:'monthly', assertion:[], evidence_req:'', owner_role:'', pcaob_ref:'', is_key_control:true }
+const BLANK = { control_id:'', entity_id:'', domain:'LA', control_title:'', risk:'', risk_rating:'High', control_type:'Preventive', frequency:'monthly', assertion:[], evidence_req:'', owner_role:'', pcaob_ref:'', is_key_control:true }
 
 export default function RCM() {
   const { programmeId, isAuditor } = useProgramme()
@@ -40,9 +41,11 @@ export default function RCM() {
   const [filter, setFilter] = useState('ALL')
   const [saving, setSaving] = useState(false)
   const [seeding, setSeeding] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
+  const [entities, setEntities] = useState([])
 
   const load = () => getRCM(programmeId).then(d=>setRows(d||[]))
-  useEffect(()=>{ if(programmeId) load() },[programmeId])
+  useEffect(()=>{ if(programmeId) { load(); getEntities(programmeId).then(d=>setEntities(d||[])) } },[programmeId])
 
   const set = k => e => setForm(f=>({...f,[k]:e.target.value}))
   const open = (r=BLANK) => { setForm({...BLANK,...r,assertion:r.assertion??[]}); setModal(true) }
@@ -80,6 +83,7 @@ export default function RCM() {
       <PageHeader eyebrow={<><Shield size={12}/>Plan · RCM</>} title="Risk & Control Matrix"
         subtitle={`${rows.length} controls · PCAOB AS 2201 Para .26–.29`}
         actions={isAuditor&&<div className="flex gap-2">
+          <button className="btn btn-outline btn-sm" onClick={()=>setImportOpen(true)}><Upload size={13}/>Import</button>
           <button className="btn btn-outline btn-sm" onClick={seedBase} disabled={seeding}>Seed base controls</button>
           <button className="btn btn-primary" onClick={()=>open()}><Plus size={15}/>Add control</button>
         </div>} />
@@ -93,6 +97,8 @@ export default function RCM() {
       <div className="card p-0 overflow-hidden">
         <RecordTable cols={cols} rows={visible} onEdit={isAuditor?open:null} onDelete={isAuditor?id=>deleteRCM(id).then(load):null} emptyMsg="No controls yet. Seed base controls or add manually."/>
       </div>
+
+      <ImportModal open={importOpen} onClose={(did)=>{setImportOpen(false); if(did) load()}} onImport={upsertRCM} programmeId={programmeId}/>
 
       <Modal open={modal} onClose={()=>setModal(false)} title={form.id?'Edit control':'New control'} size="max-w-2xl">
         <div className="grid grid-cols-2 gap-3">
@@ -115,6 +121,12 @@ export default function RCM() {
           <Field label="Status"><Select value={form.status||'Not Tested'} onChange={set('status')} options={['Not Tested','In Progress','Effective','Ineffective','Not Applicable']}/></Field>
           <Field label="Key control"><Select value={form.is_key_control?'yes':'no'} onChange={e=>setForm(f=>({...f,is_key_control:e.target.value==='yes'}))} options={[{value:'yes',label:'Yes'},{value:'no',label:'No'}]}/></Field>
         </div>
+        {entities.length > 0 && (
+          <Field label="Entity" hint="Scope this control to a specific entity, or leave blank for all.">
+            <Select value={form.entity_id||''} onChange={set('entity_id')}
+              options={[{value:'',label:'All entities'},...entities.map(e=>({value:e.id,label:e.entity_name}))]}/>
+          </Field>
+        )}
         <Field label="Assertions">
           <div className="flex gap-3 flex-wrap mt-1">{ASSERTIONS.map(a=>(
             <label key={a} className="flex items-center gap-1.5 text-sm cursor-pointer">

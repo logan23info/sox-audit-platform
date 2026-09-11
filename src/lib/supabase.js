@@ -12,9 +12,29 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 export const sanitise = (obj) =>
   Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, v === '' ? null : v]))
 
-const handle = async (promise) => {
+// Error bridge — ToastContext registers a reporter at mount so DB failures
+// become visible instead of silently returning null (audit-tool requirement).
+let errorReporter = null
+export const registerErrorReporter = (fn) => { errorReporter = fn }
+
+const friendly = (msg='') => {
+  if (/row-level security|violates row-level/i.test(msg)) return 'You do not have permission to make this change.'
+  if (/duplicate key|already exists/i.test(msg))          return 'A record with these details already exists.'
+  if (/foreign key/i.test(msg))                           return 'Linked record not found or already removed.'
+  if (/violates not-null/i.test(msg))                     return 'A required field is missing.'
+  if (/JWT|expired/i.test(msg))                           return 'Your session expired — sign in again.'
+  return msg
+}
+
+const handle = async (promise, opts = {}) => {
   const { data, error } = await promise
-  if (error) { logError(error.message); return null }
+  if (error) {
+    logError(error.message)
+    if (!opts.silent && errorReporter) {
+      errorReporter({ type: 'error', title: 'Save failed', description: friendly(error.message) })
+    }
+    return null
+  }
   return data
 }
 
@@ -64,6 +84,16 @@ export const updateMemberRole = (id, role) =>
 
 export const removeMember = (id) =>
   handle(supabase.from('programme_members').delete().eq('id', id))
+
+// Invite lookup. Returns null for both "not found" and "error" so the
+// caller cannot use this to enumerate which emails exist on the platform.
+export const findUserByEmail = async (email) => {
+  const { data } = await supabase
+    .from('profiles').select('id, full_name, email')
+    .eq('email', String(email).trim().toLowerCase())
+    .maybeSingle()
+  return data ?? null
+}
 
 export const getMyRole = async (programmeId, userId) => {
   const { data } = await supabase.from('programme_members').select('role').eq('programme_id', programmeId).eq('user_id', userId).maybeSingle()
@@ -467,16 +497,93 @@ export const revokePortalToken = (id) =>
   handle(supabase.from('sox_portal_access').update({ active:false }).eq('id', id))
 
 export const getPortalData = async (token) => {
-  // Validate token
-  const { data:access } = await supabase.from('sox_portal_access').select('*, programmes(name, fiscal_year, entity)').eq('token', token).eq('active', true).maybeSingle()
-  if (!access) return null
-  if (access.expires_at && new Date(access.expires_at) < new Date()) return null
-  const programmeId = access.programme_id
-  const [findings, deficiencies, remediation, rcm] = await Promise.all([
-    handle(supabase.from('sox_findings').select('control_id, domain, title, classification, severity, is_draft').eq('programme_id', programmeId).eq('is_draft', false)),
-    handle(supabase.from('sox_deficiency_log').select('ref, classification, status, audit_comm_req, public_disc_req').eq('programme_id', programmeId)),
-    handle(supabase.from('sox_remediation').select('action, owner_role, target_date, status').eq('programme_id', programmeId)),
-    handle(supabase.from('sox_rcm').select('control_id, domain, control_title, status').eq('programme_id', programmeId)),
-  ])
-  return { programme: access.programmes, findings:findings||[], deficiencies:deficiencies||[], remediation:remediation||[], rcm:rcm||[] }
+  // Served by the portal-data Edge Function using the service role.
+  // The browser never queries engagement tables for portal access, so RLS
+  // on those tables stays strict and tokens cannot be enumerated client-side.
+  try {
+    const res = await fetch(`${SUPABASE_URL}/functions/v1/portal-data`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ token }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data?.error ? null : data
+  } catch (e) {
+    logError(e.message)
+    return null
+  }
 }
+
+
+// ── EXECUTIVE DASHBOARD ───────────────────────────────────────
+export const getExecutiveData = async (programmeId) => {
+  const [rcm, findings, defs, rem, milestones, qc, assertions, ipe, vendors, cuecs, workpapers, reports] = await Promise.all([
+    handle(supabase.from('sox_rcm').select('domain, status, risk_rating, control_id').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_findings').select('domain, classification, severity, is_draft, root_cause, title, control_id').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_deficiency_log').select('ref, classification, status, audit_comm_req, public_disc_req, comm_date').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_remediation').select('status, target_date, action').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_milestones').select('milestone_type, status, due_date').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_qc_reviews').select('status, conclusion, signed_at').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_mgmt_assertions').select('assertion_type, status, icfr_effective, has_mw').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_ipe_validations').select('validated').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_vendor_reviews').select('id, vendor_name, reliance_decision').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_cuec_items').select('tested, vendor_review_id').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_workpaper_shells').select('control_id, status, ipe_validated').eq('programme_id', programmeId)),
+    handle(supabase.from('sox_audit_reports').select('status, report_type').eq('programme_id', programmeId)),
+  ])
+  return {
+    rcm:rcm||[], findings:findings||[], defs:defs||[], rem:rem||[], milestones:milestones||[],
+    qc:qc||[], assertions:assertions||[], ipe:ipe||[], vendors:vendors||[], cuecs:cuecs||[],
+    workpapers:workpapers||[], reports:reports||[]
+  }
+}
+
+// ── ENGAGEMENT PROGRESS (workflow strip) ──────────────────────
+export const getEngagementProgress = async (programmeId) => {
+  const [scope, rcm, wp, ipe, items, findings, defs, reports] = await Promise.all([
+    handle(supabase.from('sox_scope').select('id', { count:'exact', head:true }).eq('programme_id', programmeId), { silent:true }),
+    handle(supabase.from('sox_rcm').select('status').eq('programme_id', programmeId), { silent:true }),
+    handle(supabase.from('sox_workpaper_shells').select('status').eq('programme_id', programmeId), { silent:true }),
+    handle(supabase.from('sox_ipe_validations').select('validated').eq('programme_id', programmeId), { silent:true }),
+    handle(supabase.from('sox_testing_items').select('id', { count:'exact', head:true }).eq('programme_id', programmeId), { silent:true }),
+    handle(supabase.from('sox_findings').select('is_draft').eq('programme_id', programmeId), { silent:true }),
+    handle(supabase.from('sox_deficiency_log').select('id', { count:'exact', head:true }).eq('programme_id', programmeId), { silent:true }),
+    handle(supabase.from('sox_audit_reports').select('status').eq('programme_id', programmeId), { silent:true }),
+  ])
+  const len = x => Array.isArray(x) ? x.length : 0
+  return {
+    scope:     len(scope) > 0,
+    rcm:       len(rcm) > 0,
+    workpaper: len(wp) > 0,
+    ipe:       len(ipe) > 0 && ipe.every(i => i.validated),
+    testing:   len(items) > 0,
+    findings:  len(findings) > 0 && findings.every(f => !f.is_draft),
+    report:    len(reports) > 0 && reports.some(r => r.status === 'Final'),
+    counts: {
+      rcmTested: len(rcm) ? rcm.filter(r => r.status !== 'Not Tested').length : 0,
+      rcmTotal:  len(rcm),
+      ipeOk:     len(ipe) ? ipe.filter(i => i.validated).length : 0,
+      ipeTotal:  len(ipe),
+      findSigned:len(findings) ? findings.filter(f => !f.is_draft).length : 0,
+      findTotal: len(findings),
+    }
+  }
+}
+
+// ── SECTOR VARIANTS → RCM (wiring the orphaned table) ─────────
+export const promoteSectorVariantToRCM = async (variant, programmeId) =>
+  upsertRCM({
+    programme_id: programmeId,
+    control_id:   variant.control_id,
+    domain:       variant.domain || 'LA',
+    control_title:variant.additional_req?.slice(0,120) || variant.control_id,
+    objective:    variant.additional_req || null,
+    risk_rating:  'High',
+    control_type: 'Preventive',
+    frequency:    'quarterly',
+    pcaob_ref:    variant.standard_basis || null,
+    sector_tags:  [variant.sector],
+    status:       'Not Tested',
+    is_key_control: true,
+  })

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Users, Plus, Trash2 } from 'lucide-react'
-import { getMembers, addMember, removeMember, updateMemberRole } from '../lib/supabase'
+import { getMembers, addMember, removeMember, updateMemberRole, findUserByEmail } from '../lib/supabase'
 import { useProgramme } from '../context/ProgrammeContext'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import { supabase } from '../lib/supabase'
 import { MEMBER_ROLES } from '../constants'
 import PageHeader from '../components/PageHeader'
 import Modal from '../components/Modal'
@@ -26,19 +25,27 @@ export default function Team() {
   const invite = async () => {
     if (!email) { toast({ type:'warning', title:'Email required' }); return }
     setSaving(true)
-    // Look up user by email in profiles
-    const { data: profile } = await supabase.from('profiles').select('id, full_name, email').eq('email', email).maybeSingle()
+    const profile = await findUserByEmail(email)
+
+    // Generic response either way — a failed lookup must not confirm whether
+    // an account exists on the platform (prevents email enumeration).
     if (!profile) {
-      toast({ type:'error', title:'User not found', description:'They must sign up first before being added.' })
-      setSaving(false); return
+      toast({
+        type: 'info',
+        title: 'Invitation processed',
+        description: 'If an account exists for that address it now has access. Ask them to sign up first if they cannot see the engagement.',
+      })
+      setModal(false); setEmail(''); setSaving(false); return
     }
     if (members.find(m => m.user_id === profile.id)) {
-      toast({ type:'warning', title:'Already a member' })
+      toast({ type:'warning', title:'Already a member of this engagement' })
       setSaving(false); return
     }
-    await addMember({ programme_id: programmeId, user_id: profile.id, invited_by: user.id, role })
-    toast({ type:'success', title:`${profile.full_name || email} added as ${role}` })
-    setModal(false); setEmail(''); load()
+    const added = await addMember({ programme_id: programmeId, user_id: profile.id, invited_by: user.id, role })
+    if (added !== null) {
+      toast({ type:'success', title:`${profile.full_name || 'Member'} added as ${role}` })
+      setModal(false); setEmail(''); load()
+    }
     setSaving(false)
   }
 

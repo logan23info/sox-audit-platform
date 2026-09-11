@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import NotificationCenter from './NotificationCenter'
+import ProgressStrip from './ProgressStrip'
 import { useTheme } from '../context/ThemeContext'
 import { useProgramme } from '../context/ProgrammeContext'
 import { signOut } from '../lib/supabase'
@@ -9,7 +10,7 @@ import {
   LayoutDashboard, Target, FlaskConical, BarChart3, BookOpen,
   ChevronDown, ChevronRight, Sun, Moon, LogOut, Menu, X,
   Shield, Search as SearchIcon, Bell, Settings, ChevronLeft, Users, TrendingUp, History, ClipboardList,
-  Calendar, ShieldCheck, Link2
+  Calendar, ShieldCheck, Link2, Briefcase, ScanSearch
 } from 'lucide-react'
 
 const NAV = [
@@ -113,9 +114,17 @@ export default function AppShell({ children }) {
           <Users size={16} />
           {open && 'Team'}
         </Link>
+        <Link to="/executive" className={`sidebar-link ${location.pathname === '/executive' ? 'active' : ''}`}>
+          <Briefcase size={16} />
+          {open && 'Executive'}
+        </Link>
         <Link to="/analytics" className={`sidebar-link ${location.pathname === '/analytics' ? 'active' : ''}`}>
           <TrendingUp size={16} />
           {open && 'Analytics'}
+        </Link>
+        <Link to="/inspection-readiness" className={`sidebar-link ${location.pathname === '/inspection-readiness' ? 'active' : ''}`}>
+          <ScanSearch size={16} />
+          {open && 'Inspection Ready'}
         </Link>
         <Link to="/audit-trail" className={`sidebar-link ${location.pathname === '/audit-trail' ? 'active' : ''}`}>
           <History size={16} />
@@ -232,6 +241,8 @@ export default function AppShell({ children }) {
             <Link to="/settings" className="btn-ghost p-1.5 rounded-lg"><Settings size={16} /></Link>
           </div>
         </header>
+
+        <ProgressStrip />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">

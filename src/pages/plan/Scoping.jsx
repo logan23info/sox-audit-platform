@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Target, Plus, Calculator } from 'lucide-react'
-import { getScope, upsertScope, deleteScope } from '../../lib/supabase'
+import { getScope, upsertScope, deleteScope, getEntities } from '../../lib/supabase'
 import { useProgramme } from '../../context/ProgrammeContext'
 import { useToast } from '../../context/ToastContext'
 import { DOMAINS, SCOPE_DECISIONS } from '../../constants'
@@ -9,7 +9,7 @@ import RecordTable from '../../components/RecordTable'
 import Modal from '../../components/Modal'
 import { Field, Input, Select, Textarea } from '../../components/FormField'
 
-const BLANK = { system_name:'', system_type:'', fs_impact:0, volume_score:0, complexity:0, prior_findings:0, change_activity:0, decision:'', rationale:'', domains:[] }
+const BLANK = { system_name:'', entity_id:'', system_type:'', fs_impact:0, volume_score:0, complexity:0, prior_findings:0, change_activity:0, decision:'', rationale:'', domains:[] }
 const score2decision = s => s>=8?'IN SCOPE':s>=5?'IN SCOPE':s>=2?'CONSIDER':'OUT OF SCOPE'
 const score2color = d => d==='IN SCOPE'?'badge-red':d==='CONSIDER'?'badge-amber':'badge-green'
 
@@ -28,9 +28,10 @@ export default function Scoping() {
   const [modal, setModal] = useState(false)
   const [form, setForm]   = useState(BLANK)
   const [saving, setSaving] = useState(false)
+  const [entities, setEntities] = useState([])
 
   const load = () => getScope(programmeId).then(d => setRows(d||[]))
-  useEffect(() => { if (programmeId) load() }, [programmeId])
+  useEffect(() => { if (programmeId) { load(); getEntities(programmeId).then(d=>setEntities(d||[])) } }, [programmeId])
 
   const set = k => e => {
     const v = ['fs_impact','volume_score','complexity','prior_findings','change_activity'].includes(k) ? Number(e.target.value) : e.target.value
@@ -80,6 +81,12 @@ export default function Scoping() {
 
       <Modal open={modal} onClose={()=>setModal(false)} title="Score system" size="max-w-xl">
         <Field label="System name"><Input placeholder="SAP S/4HANA — AP/GL module" value={form.system_name} onChange={set('system_name')} maxLength={100}/></Field>
+        {entities.length > 0 && (
+          <Field label="Entity" hint="Which legal entity does this system serve?">
+            <Select value={form.entity_id||''} onChange={set('entity_id')}
+              options={[{value:'',label:'All entities / not specified'},...entities.map(e=>({value:e.id,label:e.entity_name}))]}/>
+          </Field>
+        )}
         <Field label="System type"><Input placeholder="ERP / SaaS / Database / Middleware" value={form.system_type} onChange={set('system_type')} maxLength={60}/></Field>
         <div className="divider"/>
         <div className="flex items-center gap-2 mb-3"><Calculator size={14} className="text-brand-600"/><span className="text-sm font-semibold">Risk scoring</span><span className="text-xs text-gray-400">AS 2201 Para .22</span></div>

@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect } from 'react'
+import { registerErrorReporter } from '../lib/supabase'
 import { CheckCircle, AlertTriangle, XCircle, Info, X } from 'lucide-react'
 
 const ToastContext = createContext({})
@@ -20,6 +21,9 @@ export function ToastProvider({ children }) {
     setToasts(t => [...t, { id, title, description, type }])
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), duration)
   }, [])
+
+  // Bridge DB-layer failures into the toast system so nothing fails silently.
+  useEffect(() => { registerErrorReporter(toast); return () => registerErrorReporter(null) }, [toast])
 
   const dismiss = (id) => setToasts(t => t.filter(x => x.id !== id))
 
